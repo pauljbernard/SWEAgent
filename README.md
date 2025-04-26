@@ -1,4 +1,4 @@
-# 🩺 opendeepwiki: Your AI-Powered Code Documentation Assistant
+# 🩺 OpenDeepWiki: Your AI-Powered Code Documentation Assistant
 
 Welcome to **opendeepwiki**! Interact with your codebase like never before. opendeepwiki automatically generates comprehensive documentation and detailed examples, tailored to your code, accessible via an interactive web UI.
 

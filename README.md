@@ -261,7 +261,6 @@ opendeepwiki uses environment variables for configuration. Create a `.env` file 
 **Required:**
 
 -   `GEMINI_API_KEY`: Your Google Gemini API key (used by Classifier and potentially other models).
--   `ANTHROPIC_API_KEY`: Your Anthropic API key (required if using Claude models).
 
 **Optional (for Langfuse tracing):**
 

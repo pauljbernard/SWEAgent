@@ -1,10 +1,10 @@
 :root {
-  /* Colors - deeprepo style */
-  --primary-color: #10a37f; /* deeprepo green */
+  /* Colors - opendeepwiki style */
+  --primary-color: #10a37f; /* opendeepwiki green */
   --secondary-color: #6366f1;
-  --background-dark: #0f0f0f; /* Exact deeprepo dark background */
+  --background-dark: #0f0f0f; /* Exact opendeepwiki dark background */
   --text-light: #ffffff;
-  --input-bg-dark: #202123; /* deeprepo input background */
+  --input-bg-dark: #202123; /* opendeepwiki input background */
   --border-dark: rgba(255, 255, 255, 0.1);
   
   /* Spacing */

@@ -1,15 +1,15 @@
-# DeepRepo Frontend
+# opendeepwiki Frontend
 
-A modern, deeprepo-like user interface for the DeepRepo application.
+A modern, opendeepwiki-like user interface for the opendeepwiki application.
 
 ## Features
 
-- Modern, responsive UI with a design similar to deeprepo
+- Modern, responsive UI with a design similar to opendeepwiki
 - Dark and light mode support
 - Hideable sidebars for repository information and context
 - Markdown rendering with syntax highlighting for code blocks
 - Support for repository initialization via URL or zip upload
-- Integration with the existing DeepRepo backend
+- Integration with the existing opendeepwiki backend
 
 ## Project Structure
 

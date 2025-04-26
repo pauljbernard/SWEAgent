@@ -16,8 +16,8 @@ import shutil
 # Add the parent directory to the path so we can import from src
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
-sys.path.append(os.path.dirname(parent_dir))  # Add DeepRepo root directory
-sys.path.append('/workspace/DeepRepo')  # Add absolute path to DeepRepo root directory
+sys.path.append(os.path.dirname(parent_dir))  # Add opendeepwiki root directory
+sys.path.append('/workspace/opendeepwiki')  # Add absolute path to opendeepwiki root directory
 
 # Mock the functions for testing
 def init_repo(repo_link):

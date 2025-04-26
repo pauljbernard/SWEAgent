@@ -204,7 +204,7 @@ const RightSidebar = ({ visible, toggleSidebar, repoParams }) => {
       </SidebarContent>
       
       <SidebarFooter theme={theme}>
-        Powered by DeepRepo AI
+        Powered by opendeepwiki AI
       </SidebarFooter>
     </SidebarContainer>
   );

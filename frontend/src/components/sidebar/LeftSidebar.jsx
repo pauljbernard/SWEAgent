@@ -343,7 +343,7 @@ const LeftSidebar = ({
       </SidebarContent>
       
       <SidebarFooter theme={theme}>
-        DeepRepo v1.0.0 - AI-Powered Code Documentation Assistant
+        opendeepwiki v1.0.0 - AI-Powered Code Documentation Assistant
       </SidebarFooter>
       
       {/* Configuration Modal */}

@@ -35,7 +35,7 @@ describe('ChatArea', () => {
       />
     );
     
-    expect(screen.getByText(/DeepRepo - test-repo/i)).toBeInTheDocument();
+    expect(screen.getByText(/opendeepwiki - test-repo/i)).toBeInTheDocument();
     expect(screen.getByText(/Ask me anything about the test-repo repository/i)).toBeInTheDocument();
   });
 });

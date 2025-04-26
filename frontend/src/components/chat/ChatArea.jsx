@@ -132,7 +132,7 @@ const ChatArea = ({
             <>
               <RepoIcon size={16} /> {repoParams.repo_name}
             </>
-          ) : 'DeepRepo'}
+          ) : 'opendeepwiki'}
         </Title>
         
         <ToggleButton onClick={toggleRightSidebar} theme={theme} aria-label="Toggle right sidebar">
@@ -160,7 +160,7 @@ const ChatArea = ({
         disabled={!hasRepoInfo || isLoading}
         isLoading={isLoading}
         placeholder={hasRepoInfo 
-          ? isLoading ? "Thinking..." : "Message DeepRepo..." 
+          ? isLoading ? "Thinking..." : "Message opendeepwiki..." 
           : "Initialize a repository to start chatting..."}
       />
     </ChatContainer>

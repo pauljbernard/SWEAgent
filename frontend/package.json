@@ -1,5 +1,5 @@
 {
-  "name": "DeepRepo-frontend",
+  "name": "opendeepwiki-frontend",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -9,10 +9,10 @@
     "test": "jest",
     "test:watch": "jest --watch"
   },
-  "keywords": ["DeepRepo", "chat", "documentation"],
+  "keywords": ["opendeepwiki", "chat", "documentation"],
   "author": "",
   "license": "ISC",
-  "description": "Modern UI for DeepRepo application",
+  "description": "Modern UI for opendeepwiki application",
   "dependencies": {
     "@vitejs/plugin-react": "^4.4.1",
     "axios": "^1.8.4",

@@ -73,7 +73,7 @@ const ChatInput = ({ onSendMessage, disabled, placeholder, isLoading }) => {
         </form>
       </div>
       <div className="input-footer">
-        DeepRepo may produce inaccurate information about repositories or code, but less then a llm without DeepRepo.
+        opendeepwiki may produce inaccurate information about repositories or code, but less then a llm without opendeepwiki.
       </div>
     </div>
   );

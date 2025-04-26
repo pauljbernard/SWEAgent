@@ -479,7 +479,7 @@ const App = () => {
         </div>
         
         <div className="sidebar-footer">
-          DeepRepo v1.0.0 - AI-Powered Code Documentation Assistant
+          opendeepwiki v1.0.0 - AI-Powered Code Documentation Assistant
         </div>
       </div>
       
@@ -496,7 +496,7 @@ const App = () => {
               <rect width="24" height="24" rx="4" fill="#10a37f" />
               <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span style={{verticalAlign: 'middle'}}>{repoParams.repo_name ? `DeepRepo - ${repoParams.repo_name}` : 'DeepRepo'}</span>
+            <span style={{verticalAlign: 'middle'}}>{repoParams.repo_name ? `opendeepwiki - ${repoParams.repo_name}` : 'opendeepwiki'}</span>
           </div>
           <button className="header-button">
             Share
@@ -522,7 +522,7 @@ const App = () => {
           onSendMessage={handleSendMessage} 
           disabled={!repoParams.repo_name || isLoading}
           isLoading={isLoading}
-          placeholder={repoParams.repo_name ? "Message DeepRepo..." : "Initialize a repository to start chatting..."}
+          placeholder={repoParams.repo_name ? "Message opendeepwiki..." : "Initialize a repository to start chatting..."}
         />
       </div>
       

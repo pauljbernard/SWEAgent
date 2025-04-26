@@ -8,7 +8,7 @@ services:
     ports:
       - "7860:80"
     networks:
-      - DeepRepo-network
+      - opendeepwiki-network
     depends_on:
       - simple_adapter
 
@@ -21,11 +21,11 @@ services:
     volumes:
       - ..:/app
     networks:
-      - DeepRepo-network
+      - opendeepwiki-network
     environment:
       - FLASK_ENV=production
       - FLASK_APP=frontend/src/simple_adapter.py
 
 networks:
-  DeepRepo-network:
+  opendeepwiki-network:
     driver: bridge

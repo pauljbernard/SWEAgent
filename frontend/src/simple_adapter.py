@@ -14,7 +14,7 @@ import shutil
 # Add the parent directory to the path so we can import from src
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 grandparent_dir = os.path.dirname(parent_dir)
-sys.path.insert(0, grandparent_dir) # Add DeepRepo root directory first
+sys.path.insert(0, grandparent_dir) # Add opendeepwiki root directory first
 
 print(f"System path: {sys.path}")
 

@@ -5,7 +5,7 @@ volumes:
   ducomentations_json_data:
   configs_json_data:
 networks:
-  DeepRepo-network:
+  opendeepwiki-network:
     driver: bridge
 services:
   classifier: # Assuming this was meant to be 'classifier' based on the port and env vars
@@ -25,7 +25,7 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY} # Explicitly pass the key
       # - OPENAI_API_KEY=sk-dummy-key-for-testing-only # Remove dummy key
     networks:
-      - DeepRepo-network
+      - opendeepwiki-network
 
   libraire:
     build: .
@@ -42,7 +42,7 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY} # Explicitly pass the key
       # - OPENAI_API_KEY=sk-dummy-key-for-testing-only # Remove dummy key
     networks:
-      - DeepRepo-network
+      - opendeepwiki-network
 
   model_server:
     build: .
@@ -64,7 +64,7 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY} # Explicitly pass the key
       # - OPENAI_API_KEY=sk-dummy-key-for-testing-only # Remove dummy key
     networks:
-      - DeepRepo-network
+      - opendeepwiki-network
 
   frontend:
     build:
@@ -75,7 +75,7 @@ services:
     depends_on:
       - simple_adapter
     networks:
-      - DeepRepo-network
+      - opendeepwiki-network
 
   simple_adapter:
     build:
@@ -95,7 +95,7 @@ services:
     env_file:
       - .env
     networks:
-      - DeepRepo-network
+      - opendeepwiki-network
     environment:
       - FLASK_ENV=development # Use development for debugging
       - FLASK_APP=frontend/src/simple_adapter.py

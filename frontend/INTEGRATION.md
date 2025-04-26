@@ -1,6 +1,6 @@
 # Integration Guide
 
-This document explains how to integrate the new frontend with the existing DeepRepo backend.
+This document explains how to integrate the new frontend with the existing opendeepwiki backend.
 
 ## Architecture
 

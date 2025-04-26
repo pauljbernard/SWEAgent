@@ -1,7 +1,7 @@
-# Cahier de Charge: deeprepo-like UI for DeepRepo
+# Cahier de Charge: opendeepwiki-like UI for opendeepwiki
 
 ## Project Overview
-Create a modern, deeprepo-like user interface for the DeepRepo application that maintains all existing functionality while providing an improved user experience.
+Create a modern, opendeepwiki-like user interface for the opendeepwiki application that maintains all existing functionality while providing an improved user experience.
 
 ## UI Requirements
 
@@ -39,7 +39,7 @@ Create a modern, deeprepo-like user interface for the DeepRepo application that 
    - Clear distinction between user and AI messages
    - Support for markdown formatting in AI responses
    - Code syntax highlighting
-   - Bubble layout similar to deeprepo
+   - Bubble layout similar to opendeepwiki
 
 2. **Input Area**:
    - Floating input box at the bottom
@@ -96,7 +96,7 @@ Create a modern, deeprepo-like user interface for the DeepRepo application that 
 ## Design Guidelines
 
 1. **Visual Style**:
-   - Clean, minimal interface similar to deeprepo
+   - Clean, minimal interface similar to opendeepwiki
    - Dark background for dark mode
    - Light background for light mode
    - Consistent color scheme

@@ -10,7 +10,7 @@ st.set_page_config(page_title="Documentation Explorer", page_icon="📖", layout
 @st.cache_data
 def load_documentation():
     with open(
-        "/Users/davidperso/projects/DeepRepo/docstrings_json/spark-nlp.json", "r"
+        "/Users/davidperso/projects/opendeepwiki/docstrings_json/spark-nlp.json", "r"
     ) as f:
         data = json.load(f)
     # Filter out documents without 'documentation' key

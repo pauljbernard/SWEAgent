@@ -1,6 +1,6 @@
-# 🩺 DeepRepo: Your AI-Powered Code Documentation Assistant
+# 🩺 opendeepwiki: Your AI-Powered Code Documentation Assistant
 
-Welcome to **DeepRepo**! Interact with your codebase like never before. DeepRepo automatically generates comprehensive documentation and detailed examples, tailored to your code, accessible via an interactive web UI.
+Welcome to **opendeepwiki**! Interact with your codebase like never before. opendeepwiki automatically generates comprehensive documentation and detailed examples, tailored to your code, accessible via an interactive web UI.
 
 It makes you an expert of any codebase, any repo.
 
@@ -10,7 +10,7 @@ It makes you an expert of any codebase, any repo.
 -   **Interactive Chat:** Ask specific questions about your codebase and get focused answers from an AI trained on *your* repository.
   - Review code to see downstream impact etc...
 -   **Conversation History:** Save and manage multiple conversations for each repository, with the ability to switch between them.
--   **Modern UI:** Clean, responsive interface inspired by deeprepo with markdown rendering and code syntax highlighting.
+-   **Modern UI:** Clean, responsive interface inspired by opendeepwiki with markdown rendering and code syntax highlighting.
 -   **Remote & Local Repos:** Analyze public GitHub repositories or upload your local projects directly.
 -   **Multiple LLM Options:** Choose from various Gemini and Claude models.
 -   **Extensible:** Built with Docker and modern Python tooling.
@@ -18,12 +18,12 @@ It makes you an expert of any codebase, any repo.
 ## 🚀 Getting Started
 
 
-Follow these steps to get DeepRepo up and running:
+Follow these steps to get opendeepwiki up and running:
 
 1.  **Clone the Repository:**
     ```bash
-    git clone https://github.com/Flopsky/DeepRepo.git
-    cd DeepRepo
+    git clone https://github.com/Flopsky/opendeepwiki.git
+    cd opendeepwiki
     ```
 
 2.  **Configure API Keys:**
@@ -40,13 +40,13 @@ Follow these steps to get DeepRepo up and running:
 
 ## 💬 Chat With Your Code!
 
-Once DeepRepo is running, you can interact with the "Custom Documentalist" – a specialized AI assistant trained on your specific repository:
+Once opendeepwiki is running, you can interact with the "Custom Documentalist" – a specialized AI assistant trained on your specific repository:
 
 1.  **Open Web UI:** Go to `http://localhost:7860`.
 2.  **Load Your Repository:**
     *   **GitHub Repo:** Paste the URL into the "Repository URL" field in the sidebar and click "Initialize".
     *   **Local Repo:** Create a `.zip` archive of your local repository folder. Use the "Upload Repository (.zip)" button in the sidebar to upload it.
-3.  **Wait for Processing:** DeepRepo will clone/extract your code and analyze it (docstrings, documentation files, configs), storing the processed data in shared Docker volumes. Status messages will appear in the sidebar.
+3.  **Wait for Processing:** opendeepwiki will clone/extract your code and analyze it (docstrings, documentation files, configs), storing the processed data in shared Docker volumes. Status messages will appear in the sidebar.
 4.  **Select the Expert:** Choose "Custom Documentalist" from the "Select Model" dropdown.
 5.  **Ensure API Keys:** Double-check that your necessary API keys are set in the `.env` file.
 6.  **Start Asking:** Use the chat interface to ask questions about your repository. Get insights and explanations directly from the AI that understands your code!
@@ -58,7 +58,7 @@ Once DeepRepo is running, you can interact with the "Custom Documentalist" – a
 
 ## 🏗️ How It Works
 
-DeepRepo uses a microservice architecture orchestrated by Docker Compose:
+opendeepwiki uses a microservice architecture orchestrated by Docker Compose:
 
 ```mermaid
 %% Mermaid Diagram - Application Architecture (Darker Grayscale)
@@ -256,7 +256,7 @@ graph TD
 
 ## ⚙️ Configuration
 
-DeepRepo uses environment variables for configuration. Create a `.env` file in the project root (you can copy `.env.example`).
+opendeepwiki uses environment variables for configuration. Create a `.env` file in the project root (you can copy `.env.example`).
 
 **Required:**
 
@@ -276,13 +276,13 @@ DeepRepo uses environment variables for configuration. Create a `.env` file in t
 -   [x] Index documentation files (`.md`) for context.
 -   [x] Index configuration files (`.yaml`) for context.
 -   [x] Improve file classification accuracy and robustness.
--   [x] Modernize UI with deeprepo-like interface.
+-   [x] Modernize UI with opendeepwiki-like interface.
 -   [x] Add conversation history management.
 -   [x] Implement markdown rendering and code syntax highlighting.
 -   [ ] Add more sophisticated RAG techniques in Libraire.
 -   [ ] Add file browser for repository exploration.
 
-## 🤔 Why DeepRepo?
+## 🤔 Why opendeepwiki?
 
 1.  **Deeper Understanding:** Quickly grasp complex codebases through AI-generated explanations and targeted answers.
 2.  **Time Savings:** Automate documentation generation and searching, freeing up developer time.

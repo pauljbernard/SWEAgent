@@ -1,0 +1,15 @@
+env_doctutor
+
+.env
+.*
+
+# all file with . in the beginning , recusively
+.*.txt
+.*.py
+.*.json
+.*.exe
+# all file with . in the beginning , recusively, in recursive directories
+
+**/.*
+
+repository_folder

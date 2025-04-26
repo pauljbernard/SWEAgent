@@ -1,0 +1,7 @@
+.git/
+.gitignore
+__pycache__/
+*.pyc
+*.log
+repository_folder/*
+env_doctutor

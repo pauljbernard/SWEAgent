@@ -1,0 +1,104 @@
+version: '3.8'  # Or '3.9', '3.x' depending on your Docker Compose version preference
+volumes:
+  repository_data:
+  docstrings_json_data:
+  ducomentations_json_data:
+  configs_json_data:
+networks:
+  DeepRepo-network:
+    driver: bridge
+services:
+  classifier: # Assuming this was meant to be 'classifier' based on the port and env vars
+    build: .
+    command: sh serve_classifier.sh
+    # --- FIX: volumes block was incorrectly indented ---
+    volumes:
+      - repository_data:/app/repository_folder
+      # - /tmp:/tmp # Removed tmp sharing
+    ports:
+      - "8002:8002" # Corrected to match the environment variable PORT=8002
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8002
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY} # Explicitly pass the key
+      # - OPENAI_API_KEY=sk-dummy-key-for-testing-only # Remove dummy key
+    networks:
+      - DeepRepo-network
+
+  libraire:
+    build: .
+    volumes:
+      - repository_data:/app/repository_folder
+    command: sh serve_libraire.sh
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8001
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY} # Explicitly pass the key
+      # - OPENAI_API_KEY=sk-dummy-key-for-testing-only # Remove dummy key
+    networks:
+      - DeepRepo-network
+
+  model_server:
+    build: .
+    # IMPORTANT: Added --host 0.0.0.0 to the command to bind to all interfaces
+    command: uvicorn model_server:app --reload --host 0.0.0.0 --port 8050
+    # --- FIX: volumes, ports, and environment blocks were incorrectly indented ---
+    volumes:
+      - docstrings_json_data:/app/docstrings_json
+      - ducomentations_json_data:/app/ducomentations_json
+      - configs_json_data:/app/configs_json
+    ports:
+      # --- FIX: ports block was empty and also incorrectly indented ---
+      - "8050:8050" # Added the port mapping to match the environment variable and command
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8050
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY} # Explicitly pass the key
+      # - OPENAI_API_KEY=sk-dummy-key-for-testing-only # Remove dummy key
+    networks:
+      - DeepRepo-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "7860:80"
+    depends_on:
+      - simple_adapter
+    networks:
+      - DeepRepo-network
+
+  simple_adapter:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.simple_adapter
+    ports:
+      - "5050:5050"
+    volumes:
+      # Mount specific source directories instead of the whole project
+      - ./src:/app/src
+      - ./frontend/src:/app/frontend/src 
+      # Keep named volumes for persistent data
+      - repository_data:/app/repository_folder 
+      - docstrings_json_data:/app/docstrings_json
+      - ducomentations_json_data:/app/ducomentations_json
+      - configs_json_data:/app/configs_json
+    env_file:
+      - .env
+    networks:
+      - DeepRepo-network
+    environment:
+      - FLASK_ENV=development # Use development for debugging
+      - FLASK_APP=frontend/src/simple_adapter.py
+      - PYTHONPATH=/app
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY} # Explicitly pass the key
+    working_dir: /app # Set working directory

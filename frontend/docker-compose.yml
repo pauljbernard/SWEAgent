@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7860:80"
+    networks:
+      - DeepRepo-network
+    depends_on:
+      - simple_adapter
+
+  simple_adapter:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile.simple_adapter
+    ports:
+      - "5050:5050"
+    volumes:
+      - ..:/app
+    networks:
+      - DeepRepo-network
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=frontend/src/simple_adapter.py
+
+networks:
+  DeepRepo-network:
+    driver: bridge

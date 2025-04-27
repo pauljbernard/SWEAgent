@@ -13,3 +13,5 @@ env_doctutor
 **/.*
 
 repository_folder
+
+venv/*

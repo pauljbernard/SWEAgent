@@ -180,7 +180,7 @@ Your task is to answer any question related to the documentation of the python r
             logger.info(f"Created temporary folder with {len(path_mapping)} files for classification at {temp_dir}")
             
             # Call classifier on the updated repository in the shared volume
-            url_file_classification = "http://classifier:8002/score"
+            url_file_classification = "http://localhost:8002/score"
             logger.info(f"Calling classifier service for updated repo at {existing_repo_path}")
             response = requests.post(
                 url_file_classification, json={"repo_local_path": str(existing_repo_path), "gemini_api_key": gemini_api_key} # Use the path in the shared volume
@@ -545,7 +545,7 @@ def respond(message, history, model_name, repo_param):
         }
 
         response = requests.post(
-            "http://model_server:8050/generate",
+            "http://localhost:8050/generate",
             json=payload,
         )
         response.raise_for_status()

@@ -5,3 +5,5 @@ __pycache__/
 *.log
 repository_folder/*
 env_doctutor
+node_modules/
+frontend/dist/

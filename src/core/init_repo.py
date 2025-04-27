@@ -201,7 +201,7 @@ Your task is to answer any question related to the documentation of the python r
     else:
         
         # If file doesn't exist, proceed with repo cloning and documentation generation
-        url_file_classification = "http://classifier:8002/score"
+        url_file_classification = "http://localhost:8002/score"
 
         # Get the documentation json from the fastapi documentation generation server
         logger.info(f"Calling classifier service for {repo_path}")
@@ -291,7 +291,7 @@ Your task is to answer any question related to the documentation of the python r
     else:
         logger.info(f"Documentation not found for {display_name}, generating...")
         # If file doesn't exist, proceed with documentation generation
-        url_file_classification = "http://classifier:8002/score"
+        url_file_classification = "http://localhost:8002/score"
 
         # Get the documentation json from the fastapi documentation generation server
         logger.info(f"Calling classifier service for local folder: {repo_path}")

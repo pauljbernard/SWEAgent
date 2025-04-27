@@ -27,7 +27,7 @@ app = FastAPI()
 # Create a thread pool executor for handling model inference
 executor = ThreadPoolExecutor(max_workers=40)
 
-url = "http://libraire:8001/score"
+url = "http://localhost:8001/score"
 
 # Define the request and response models
 class QueryRequest(BaseModel):

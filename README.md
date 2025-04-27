@@ -27,7 +27,7 @@ Follow these steps to get opendeepwiki up and running:
     ```
 
 2.  **Configure API Keys:**
-    -   Copy the `.env.example` file to `.env` and complete it.
+    -   Complete the `.env` file. It is mendatory to add the Gemini API key.
     -   Fill in your API keys for the desired language models (Gemini required, Anthropic optional). See [Configuration](#configuration) for details.
     -   Langfuse setup is optional for tracing.
 

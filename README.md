@@ -255,7 +255,7 @@ graph TD
 
 ## ⚙️ Configuration
 
-opendeepwiki uses environment variables for configuration. Create a `.env` file in the project root (you can copy `.env.example`).
+opendeepwiki uses environment variables for configuration. Create a `.env` file in the project root.
 
 **Required:**
 

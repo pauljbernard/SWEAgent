@@ -217,4 +217,4 @@ def _build_cors_preflight_response():
 if __name__ == '__main__':
     port = 5050
     print(f"Starting server on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)

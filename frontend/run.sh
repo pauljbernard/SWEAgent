@@ -2,7 +2,7 @@
 
 # Start the Flask adapter in the background
 echo "Starting Flask adapter..."
-python src/adapter.py &
+python src/simple_adapter.py &
 ADAPTER_PID=$!
 
 # Start the Vite development server

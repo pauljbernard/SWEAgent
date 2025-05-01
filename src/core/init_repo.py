@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Optional
 import json
 from urllib.parse import urlparse
-import yaml
 import time
 
 import dotenv

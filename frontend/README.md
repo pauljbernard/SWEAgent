@@ -23,13 +23,12 @@ frontend/
 │   │   └── sidebar/     # Sidebar components
 │   ├── services/        # API services
 │   ├── styles/          # Global styles
-│   ├── adapter.py       # Python adapter for backend integration
+│   ├── simple_adapter.py       # Python simple_adapter for backend integration
 │   ├── App.jsx          # Main application component
 │   └── main.jsx         # Entry point
-├── CAHIER_DE_CHARGE.md  # Project specifications
 ├── index.html           # HTML template
 ├── package.json         # Dependencies and scripts
-├── run.sh               # Script to run both frontend and adapter
+├── run.sh               # Script to run both frontend and simple_adapter
 └── vite.config.js       # Vite configuration
 ```
 
@@ -45,7 +44,7 @@ frontend/
    ./run.sh
    ```
 
-   This will start both the Vite development server and the Flask adapter.
+   This will start both the Vite development server and the Flask simple_adapter.
 
 3. Open your browser and navigate to `http://localhost:53530`.
 
@@ -66,4 +65,4 @@ The built files will be in the `dist` directory.
 - React Markdown for rendering markdown
 - React Syntax Highlighter for code highlighting
 - Vite for build tooling
-- Flask for the backend adapter
+- Flask for the backend simple_adapter

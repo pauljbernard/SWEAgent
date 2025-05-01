@@ -166,96 +166,6 @@ def answer_user_querry_with_context(
 
     # Add user message
     try:
-        raise Exception("test")
-
-
-        if span:
-            generation = span.generation(
-                name="claude",
-                model="claude-3-7-sonnet-20250219",
-                model_parameters={"temperature": 0, "top_p": 1, "max_new_tokens": 20000},
-                input={"system_prompt": symstem_prompt, "user_prompt": user_prompt},
-            )
-
-        messages.append({"role": "user", "content": user_prompt})
-        
-        # Use custom function to pass API key for Claude
-        if ANTHROPIC_API_KEY:
-            # Create a custom Anthropic client with the provided API key
-            custom_client = anthropic.Client(
-                timeout=anthropic.Timeout(
-                    60.0 * 30,  # 30 minutes timeout
-                    connect=5.0,
-                ),
-                api_key=ANTHROPIC_API_KEY,
-            )
-            
-            # Generate response with the custom client
-            Answer = custom_client.messages.create(
-                model="claude-3-7-sonnet-20250219",
-                max_tokens=64000,
-                thinking={
-                    "type": "enabled",
-                    "budget_tokens": 32000,  # Maximum recommended thinking budget
-                },
-                system=symstem_prompt,
-                messages=[
-                    {"role": "user", "content": user_prompt}
-                ] 
-            )
-        else:
-            # Use the default function
-            Answer = get_claude_response(system_prompt=symstem_prompt, user_prompt=user_prompt)
-
-        if span:
-            try:
-                generation.end(
-                    output=Answer.content[1].text,
-                    usage={
-                        "input": Answer.usage.input_tokens,
-                        "output": Answer.usage.output_tokens,
-                    },
-                )
-            except Exception as e:
-                generation.end(
-                    output=Answer.content[1].text,
-                    usage={
-                        "input": 0,
-                        "output": 0,
-                    },
-                )
-                logger.error(f"Error while answering the user querry, {e}, traceback: {traceback.format_exc()}")
-
-        return Answer.content[1].text
-    except Exception as e:
-        logger.error(f"Error while answering the user querry, {e}, traceback: {traceback.format_exc()}")
-        # #use openai gpt4o
-        # if span:
-        #     generation.end(
-        #         output=f"Error message: {e}, traceback: {traceback.format_exc()}",
-        #         usage={
-        #             "input": 0,
-        #             "output": 0,
-        #         },
-        #     )
-        # if span:
-        #     generation = span.generation(
-        #         name="gpt4.1",
-        #         model="gpt-4.1",
-        #         model_parameters={"temperature": 0, "top_p": 1, "max_new_tokens": 60000},
-        #         input={"system_prompt": symstem_prompt, "user_prompt": user_prompt},
-        #     )
-
-        # Answer = get_openai_gpt4_1_response(system_prompt=symstem_prompt, user_prompt=user_prompt)
-        # if span:
-        #     generation.end(
-        #         output=Answer.choices[0].message.content,
-        #         usage={
-        #             "input": Answer.usage.prompt_tokens,
-        #             "output": Answer.usage.completion_tokens,
-        #         },
-        #     )
-        # return Answer.choices[0].message.content
         if span:
             generation = span.generation(
                 name="gemini",
@@ -266,17 +176,17 @@ def answer_user_querry_with_context(
 
         # Use custom function to pass API key
         if GEMINI_API_KEY:
-            # Configure Gemini with the provided API key
+            logger.info(f"Using Gemini API key: {GEMINI_API_KEY}")
             genai.configure(api_key=GEMINI_API_KEY)
             
-            # Create a new client instance with the provided API key
+            logger.info(f"Creating new client instance with Gemini API key...")
             client_25pro_preview = genai.GenerativeModel(
                 model_name="gemini-2.5-pro-preview-03-25",
                 safety_settings=safe,
                 generation_config={"temperature": 0.95, "top_p": 1, "max_output_tokens": 60000},
             )
             
-            # Generate response with the custom client
+            logger.info(f"Generating response with Gemini API key...")
             Answer = client_25pro_preview.generate_content(symstem_prompt + "\n" + user_prompt)
         else:
             # Use the default function
@@ -291,3 +201,8 @@ def answer_user_querry_with_context(
                 },
             )
         return Answer.text
+      
+    except Exception as e:
+        logger.error(f"Error while answering the user querry, {e}, traceback: {traceback.format_exc()}")
+        raise Exception(f"Error while answering the user querry, {e}, traceback: {traceback.format_exc()}")
+        

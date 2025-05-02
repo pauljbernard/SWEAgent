@@ -1,7 +1,6 @@
 import google.generativeai as genai
 from openai import OpenAI
 from google.generativeai import caching
-import yaml
 import dotenv
 import os
 import threading

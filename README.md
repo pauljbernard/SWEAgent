@@ -41,7 +41,6 @@ Follow these steps to get opendeepwiki up and running:
       -p 5050:5050 \
       -p 8001:8001 \
       -p 8002:8002 \
-      -p 8050:8050 \
       --env-file .env \
       opendeepwiki
     ```
@@ -71,7 +70,7 @@ Once opendeepwiki is running, you can interact with the "Custom Documentalist" �
 opendeepwiki uses a microservice architecture running within a single Docker container managed by Supervisord:
 
 ```mermaid
-%% Mermaid Diagram - Application Architecture (Darker Grayscale)
+%% Mermaid Diagram - Application Architecture (Darker Grayscale) - V2.2 (Consolidated Controller, All Comment Fixes)
 graph TD
     %%------------------------------------%%
     %%---   Darker Grayscale Definitions ---%%
@@ -105,32 +104,31 @@ graph TD
     class Srv_Frontend subgraphStyle;
 
     %%--------------------------------%%
-    %%--- Simple Adapter Service   ---%%
+    %%---    Controller Service    ---%%
     %%--------------------------------%%
-    subgraph Srv_SimpleAdapter ["🔌 Simple Adapter Service"]
+    subgraph Srv_Controller ["⚙️ Controller Service (controller.py)"]
         direction TB
-        C("API Gateway"):::nodeStyle
-        C1{"<br/>🚀 Repo Init Trigger"}:::nodeStyle
-        C -- "Handles UI Requests" --> C1
+        Ctrl("API Gateway &<br/>Model Routing Logic"):::nodeStyle
+        Ctrl_Init{"<br/>🚀 Repo Init Trigger"}:::nodeStyle
+        Ctrl_Route{"<br/>🧭 Select Model &<br/>Route Query"}:::nodeStyle
+        Ctrl -- "Handles UI Requests" --> Ctrl_Init
+        Ctrl -- "Processes Queries" --> Ctrl_Route
     end
-    class Srv_SimpleAdapter subgraphStyle;
+    class Srv_Controller subgraphStyle;
 
     %%--------------------------------%%
     %%---  Initialization Logic    ---%%
     %%--------------------------------%%
     subgraph Srv_Init ["✨ Initialization Logic"]
          direction LR
-         %% Optional: Slightly different shade for this specific subgraph if needed
-         %% style Srv_Init fill:#6a6a6a,stroke:#4f4f4f;
-         C1 -- "GitHub URL?" --> C_URL{"<br/>🔗 Init via URL"}:::nodeStyle
-         C1 -- "ZIP Upload?" --> C_ZIP{"<br/>📦 Init via Upload"}:::nodeStyle
+         Ctrl_Init -- "GitHub URL?" --> C_URL{"<br/>🔗 Init via URL"}:::nodeStyle
+         Ctrl_Init -- "ZIP Upload?" --> C_ZIP{"<br/>📦 Init via Upload"}:::nodeStyle
          C_URL -- "Clones Repo" --> D["Git Clone"]:::nodeStyle
          C_ZIP -- "Extracts Archive" --> G["Extract Zip"]:::nodeStyle
          D --> E["💾 Volume:<br/>repository_data"]:::importantNodeStyle
          G --> E
     end
     class Srv_Init subgraphStyle;
-
 
     %%--------------------------------%%
     %%---   Classifier Service     ---%%
@@ -140,19 +138,10 @@ graph TD
         H("Classifier Endpoint"):::nodeStyle
         I{"<br/>🔬 File Classification &<br/>Data Extraction"}:::nodeStyle
         H --> I
+        E -.-> H
+        %% Classifier reads from the volume where repo data is placed by Init Logic
     end
     class Srv_Classifier subgraphStyle;
-
-    %%--------------------------------%%
-    %%---   Model Server Service   ---%%
-    %%--------------------------------%%
-    subgraph Srv_ModelServer ["🧠 Model Server Service"]
-        direction TB
-        M("Model Server Endpoint"):::nodeStyle
-        N{"<br/>🧭 Select Model Logic"}:::nodeStyle
-        M --> N
-    end
-    class Srv_ModelServer subgraphStyle;
 
     %%--------------------------------%%
     %%---   Libraire Service       ---%%
@@ -162,6 +151,8 @@ graph TD
          Q("Libraire Endpoint"):::nodeStyle
          R{"<br/>💡 Retrieve Data &<br/>Augment Query"}:::nodeStyle
          Q --> R
+         E -.-> Q
+         %% Libraire reads processed data from volume (implicitly, data processed by Classifier)
     end
     class Srv_Libraire subgraphStyle;
 
@@ -170,24 +161,22 @@ graph TD
     %%--------------------------------%%
     subgraph DataStorage ["💾 Data Storage"]
         direction TB
-
-        %% Removed DockerVolumes subgraph
-
         subgraph BrowserStorage ["🌐 Browser Local Storage"]
             direction TB
-            %% Optional: Slightly different shade for this specific subgraph group if needed
-            %% style BrowserStorage fill:#5a5a5a,stroke:#333333;
             S["<br/>💬 History"]:::importantNodeStyle
             T["<br/>⚙️ Prefs"]:::importantNodeStyle
         end
-        class BrowserStorage subgraphStyle;    subgraph ExternalAPIs ["☁️ External LLM APIs"]
+        class BrowserStorage subgraphStyle;
+    end
+    class DataStorage subgraphStyle;
+    %% E is already defined in Srv_Init, but conceptually part of data storage
 
+    subgraph ExternalAPIs ["☁️ External LLM APIs"]
         direction TB
         O("🤖 Gemini API"):::nodeStyle
         P("🤖 Anthropic API"):::nodeStyle
     end
     class ExternalAPIs subgraphStyle;
-
 
     %%--------------------------------%%
     %%--- Overall System Flow      ---%%
@@ -197,46 +186,32 @@ graph TD
     %% Frontend <-> Browser Storage
     B -- "Manages State" --> BrowserStorage
 
-    %% Frontend -> Adapter
-    B -- "Sends API Request" --> C
+    %% Frontend -> Controller
+    B -- "Sends API Request" --> Ctrl
 
-    %% Adapter -> Init Logic (Triggered)
-    %% Implicit connection via C1
+    %% Controller -> Init Logic (Triggered via Ctrl_Init)
+    %% Implicit connection via Ctrl_Init
 
-    %% Adapter -> Model Server (Main Path)
-    C -- "Forwards Request" --> M
+    %% Controller -> LLMs / Libraire (via Ctrl_Route)
+    Ctrl_Route -- "Direct LLM Query" --> O & P
+    Ctrl_Route -- "Custom Query (Needs Context)" --> Q
 
-    %% Init Logic -> Classifier (via Volume E)
-    %% Implicit connection E --> H shown in DataStorage
-
-    %% Classifier -> Volumes
-    %% Implicit connection I --> J, K, L shown in DataStorage
-
-    %% Model Server -> LLMs / Libraire
-    M -- "Routes Request" --> N
-    N -- "Direct LLM Query" --> O & P
-    N -- "Custom Query (Needs Context)" --> Q
-
-    %% Libraire -> Volumes -> LLMs
-    %% Implicit connection R --> J, K, L shown in DataStorage
+    %% Libraire -> LLMs
     R -- "Augmented LLM Query" --> O & P
 
-    %% LLM -> Model Server / Libraire (Response)
-    O & P -- "LLM Response" --> N
+    %% LLM -> Controller / Libraire (Response)
+    O & P -- "LLM Response" --> Ctrl_Route
     O & P -- "LLM Response" --> R
 
-    %% Libraire -> Model Server (Response)
+    %% Libraire -> Controller (Response)
     R -- "Contextualized Response" --> Q
-    Q -- "Processed Response" --> N
+    Q -- "Processed Response" --> Ctrl_Route
 
-    %% Model Server -> Adapter -> Frontend (Response)
-    N -- "Aggregated Response" --> M
-    M -- "Final Response" --> C
-    C -- "Sends Data to UI" --> B
+    %% Controller -> Frontend (Response)
+    Ctrl -- "Sends Data to UI" --> B
 
     %% Frontend -> User (Display)
     B -- "Displays Result" --> A
-
 ```
 
 -   **Frontend Service (React):** Provides a modern web UI with conversation history management, markdown rendering, and code syntax highlighting. Uses browser localStorage to persist conversations and user preferences.

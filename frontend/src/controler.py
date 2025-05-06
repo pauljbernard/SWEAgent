@@ -25,7 +25,7 @@ print(f"System path: {sys.path}")
 
 try:
     print("Attempting to import from src.core.init_repo...")
-    from src.core.init_repo import init_repo, handle_zip_upload # 'respond' is no longer used by /api/generate here
+    from src.core.init_repo import init_repo, handle_zip_upload
     print("Successfully imported backend functions from src.core.init_repo")
 except Exception as general_e:
     print(f"An unexpected error occurred during import: {general_e}")

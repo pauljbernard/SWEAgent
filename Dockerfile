@@ -28,7 +28,7 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN mkdir -p /var/log/supervisor
 
 # Expose necessary ports
-EXPOSE 7860 8001 8002 8050 5050
+EXPOSE 7860 8001 8002 5050
 
 # Command to run supervisord
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

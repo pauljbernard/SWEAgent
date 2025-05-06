@@ -162,7 +162,7 @@ async def generate_content(request: QueryRequest):
                 )
             return {"response": response.text}
 
-        elif request.model_name == "Claude-3.7-Sonnet-32k-budget":
+        elif request.model_name == "o3-high":
             # Define a custom function to use the configured client
             def get_openai_response_with_key(prompt):
                 response = openai_client.responses.create(

@@ -293,7 +293,7 @@ const LeftSidebar = ({
           <option value="gemini-1.5-pro-002">gemini-1.5-pro-002</option>
           <option value="gemini-exp-1206">gemini-exp-1206</option>
           <option value="gemini-2.0-flash-exp">gemini-2.0-flash-exp</option>
-          <option value="Claude-3.7-Sonnet-32k-budget">Claude-3.7-Sonnet-32k-budget</option>
+          <option value="o3-high">o3-high</option>
           <option value="Custom Documentalist">Custom Documentalist</option>
         </ModelSelector>
         

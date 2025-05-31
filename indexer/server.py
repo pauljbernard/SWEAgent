@@ -53,7 +53,7 @@ async def classify_files(request: ClassificationRequest):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "indexer_service"}
+    return {"status": "healthy", "service": "indexer"}
 
 if __name__ == "__main__":
     import uvicorn

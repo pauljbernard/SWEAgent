@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize the libraire service
-libraire_service = Librairie_Service()
+repo_chat = Librairie_Service()
 
 class LibraireRequest(BaseModel):
     repository_name: str
@@ -37,7 +37,7 @@ async def process_libraire_request(request: LibraireRequest):
     try:
         logger.info(f"Received libraire request for repository: {request.repository_name}")
         
-        result = libraire_service.run_pipeline(
+        result = repo_chat.run_pipeline(
             repository_name=request.repository_name,
             cache_id=request.cache_id,
             documentation=request.documentation,
@@ -58,7 +58,7 @@ async def process_libraire_request(request: LibraireRequest):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "libraire_service"}
+    return {"status": "healthy", "service": "repo_chat"}
 
 if __name__ == "__main__":
     import uvicorn

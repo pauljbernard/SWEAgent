@@ -12,10 +12,6 @@ import instructor
 import os
 import dotenv
 import traceback
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Dict
 import json
 import instructor
 from google.generativeai import caching

@@ -1,11 +1,12 @@
 import functools
 import json
 import os
-import threading
 import traceback
 from contextvars import ContextVar
 from typing import Any, Callable, Dict, Optional
 import uuid
+import asyncio
+import inspect
 from langfuse import Langfuse
 
 import dotenv
@@ -17,23 +18,16 @@ langfuse_metadata: ContextVar[Optional[Dict]] = ContextVar(
     "langfuse_metadata", default=None
 )
 
-# Module-level singleton pattern with thread safety
+# Module-level singleton pattern for asyncio
 _langfuse_client: Optional[Langfuse] = None
-_client_lock = threading.Lock()
 
 
 def get_langfuse_client() -> Langfuse:
-    """Initialize and return the Langfuse client with thread safety."""
+    """Initialize and return the Langfuse client. Asyncio-safe singleton pattern."""
     global _langfuse_client
-    if _langfuse_client is not None:
-        return _langfuse_client
-
-    with _client_lock:
-        # Double-checked locking pattern
-        if _langfuse_client is None:
-            _langfuse_client = Langfuse()
-            _langfuse_client.auth_check()
-
+    if _langfuse_client is None:
+        _langfuse_client = Langfuse()
+        _langfuse_client.auth_check()
     return _langfuse_client
 
 
@@ -43,7 +37,6 @@ def get_langfuse_context() -> Dict[str, Any]:
         "span": langfuse_span.get(),
         "metadata": langfuse_metadata.get(),
     }
-
 
 
 def generate_trace_id() -> str:
@@ -74,9 +67,6 @@ def _filter_serializable_inputs(inputs: Dict[str, Any]) -> Dict[str, Any]:
     return {k: v for k, v in inputs.items() if is_json_serializable(v)}
 
 
-
-
-
 def _create_trace_and_span(
     langfuse: Langfuse, inputs: Dict[str, Any], name: str, file_name: str, trace_id: str
 ) -> Any:
@@ -87,33 +77,65 @@ def _create_trace_and_span(
 
 def trace(func: Callable) -> Callable:
     """Decorator to trace function execution with Langfuse observability."""
+    
+    # Check if the function is async
+    if inspect.iscoroutinefunction(func):
+        @functools.wraps(func)
+        async def async_wrapper(*args, **kwargs) -> Any:
+            if LANG_DISABLE_TRACING:
+                return await func(*args, **kwargs)
+            langfuse = get_langfuse_client()
 
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs) -> Any:
-        if LANG_DISABLE_TRACING:
-            return func(*args, **kwargs)
-        langfuse = get_langfuse_client()
+            func_inputs = _filter_serializable_inputs(kwargs)
 
-        func_inputs = _filter_serializable_inputs(kwargs)
+            func_file_name = func.__code__.co_filename
 
-        func_file_name = func.__code__.co_filename
+            # Create new span and trace
+            span = _create_trace_and_span(langfuse, func_inputs, name=func.__name__, file_name=func_file_name, trace_id=kwargs["trace_id"])
+            update_langfuse_context(span=span)
 
-        # Create new span and trace
-        span = _create_trace_and_span(langfuse, func_inputs, name=func.__name__, file_name=func_file_name, trace_id=kwargs["trace_id"])
-        update_langfuse_context(span=span)
+            result = None
+            try:
+                result = await func(*args, **kwargs)  # Properly await the async function
+                span.update(output=result)
+                return result
+            except Exception as e:
+                stacktrace = traceback.format_exc()
+                error_message = f"{type(e).__name__}: {str(e)}\n{stacktrace}"
+                span.update(status_message=error_message, level="ERROR")
+                raise
+            finally:
+                span.end()
+                update_langfuse_context(span=None)  # Clear span after completion
 
-        result = None
-        try:
-            result = func(*args, **kwargs)
-            span.update(output=result)
-            return result
-        except Exception as e:
-            stacktrace = traceback.format_exc()
-            error_message = f"{type(e).__name__}: {str(e)}\n{stacktrace}"
-            span.update(status_message=error_message, level="ERROR")
-            raise
-        finally:
-            span.end()
-            update_langfuse_context(span=None)  # Clear span after completion
+        return async_wrapper
+    else:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            if LANG_DISABLE_TRACING:
+                return func(*args, **kwargs)
+            langfuse = get_langfuse_client()
 
-    return wrapper
+            func_inputs = _filter_serializable_inputs(kwargs)
+
+            func_file_name = func.__code__.co_filename
+
+            # Create new span and trace
+            span = _create_trace_and_span(langfuse, func_inputs, name=func.__name__, file_name=func_file_name, trace_id=kwargs["trace_id"])
+            update_langfuse_context(span=span)
+
+            result = None
+            try:
+                result = func(*args, **kwargs)
+                span.update(output=result)
+                return result
+            except Exception as e:
+                stacktrace = traceback.format_exc()
+                error_message = f"{type(e).__name__}: {str(e)}\n{stacktrace}"
+                span.update(status_message=error_message, level="ERROR")
+                raise
+            finally:
+                span.end()
+                update_langfuse_context(span=None)  # Clear span after completion
+
+        return wrapper

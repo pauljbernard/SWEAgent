@@ -33,7 +33,7 @@ async def classify_files(request: ClassificationRequest):
     try:
         logger.info(f"Received classification request for folder: {request.folder_path}")
         
-        result = classifier_service.run_pipeline(
+        result = await classifier_service.run_pipeline(
             folder_path=request.folder_path,
             batch_size=request.batch_size,
             max_workers=request.max_workers,

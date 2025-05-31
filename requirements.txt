@@ -10,3 +10,6 @@ streamlit
 gradio>=5.0.2
 anthropic
 fastapi
+flask
+dotenv
+flask_cors

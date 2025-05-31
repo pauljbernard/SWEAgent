@@ -78,10 +78,10 @@ def _filter_serializable_inputs(inputs: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _create_trace_and_span(
-    langfuse: Langfuse, inputs: Dict[str, Any], name: str, trace_id: str
+    langfuse: Langfuse, inputs: Dict[str, Any], name: str, file_name: str, trace_id: str
 ) -> Any:
     """Create a new trace and span with proper metadata."""
-    trace = langfuse.trace(id=trace_id, name= "classifier")    #take the name from func argiment of env var.
+    trace = langfuse.trace(id=trace_id, name=file_name)    #take the name from func argiment of env var.
     return trace.span(name=name, input=inputs)
 
 
@@ -96,8 +96,10 @@ def trace(func: Callable) -> Callable:
 
         func_inputs = _filter_serializable_inputs(kwargs)
 
+        func_file_name = func.__code__.co_filename
+
         # Create new span and trace
-        span = _create_trace_and_span(langfuse, func_inputs, name=func.__name__, trace_id=kwargs["trace_id"])
+        span = _create_trace_and_span(langfuse, func_inputs, name=func.__name__, file_name=func_file_name, trace_id=kwargs["trace_id"])
         update_langfuse_context(span=span)
 
         result = None

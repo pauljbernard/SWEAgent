@@ -90,7 +90,8 @@ const ChatMessages = ({ messages }) => {
       {messages.map((message, index) => (
         <div 
           key={index}
-          className={`message-row ${message.role}`}
+          className={`message-row ${message.role} fade-in`}
+          style={{ animationDelay: `${index * 0.1}s` }}
           onMouseEnter={() => setHoveredMessage(index)}
           onMouseLeave={() => setHoveredMessage(null)}
         >
@@ -98,8 +99,10 @@ const ChatMessages = ({ messages }) => {
             // System message (notification)
             <div className="message-container">
               <div className="message-content">
-                <FiInfo size={14} style={{marginRight: '8px'}} />
-                {message.content}
+                <FiInfo size={16} style={{ marginRight: '8px', color: '#3b82f6', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.8)' }}>
+                  {message.content}
+                </span>
               </div>
             </div>
           ) : (
@@ -107,7 +110,7 @@ const ChatMessages = ({ messages }) => {
             <>
               <div className="message-container">
                 <div className={`message-avatar ${message.role}`}>
-                  {message.role === 'user' ? <FiUser size={14} /> : <FiCpu size={14} />}
+                  {message.role === 'user' ? <FiUser size={16} /> : <FiCpu size={16} />}
                 </div>
                 
                 <div className="message-content">
@@ -118,9 +121,9 @@ const ChatMessages = ({ messages }) => {
                         if (!inline && match) {
                           const language = match[1];
                           return (
-                            <div>
+                            <div style={{ margin: '1rem 0' }}>
                               <div className="code-header">
-                                <span>{language}</span>
+                                <span style={{ fontWeight: 600 }}>{language}</span>
                                 <div className="code-actions">
                                   <button 
                                     className="code-action-button"
@@ -128,35 +131,213 @@ const ChatMessages = ({ messages }) => {
                                   >
                                     {copiedMessage === `code-${index}` ? (
                                       <>
-                                        <FiCheck size={14} style={{marginRight: '4px'}} />
-                                        Copied!
+                                        <FiCheck size={12} />
+                                        <span>Copied!</span>
                                       </>
                                     ) : (
                                       <>
-                                        <FiCopy size={14} style={{marginRight: '4px'}} />
-                                        Copy
+                                        <FiCopy size={12} />
+                                        <span>Copy</span>
                                       </>
                                     )}
                                   </button>
                                 </div>
                               </div>
                               <SyntaxHighlighter
-                                style={vscDarkPlus}
+                                style={{
+                                  ...vscDarkPlus,
+                                  'pre[class*="language-"]': {
+                                    ...vscDarkPlus['pre[class*="language-"]'],
+                                    background: 'var(--bg-secondary)',
+                                    margin: 0,
+                                    padding: '1rem',
+                                  },
+                                  'code[class*="language-"]': {
+                                    ...vscDarkPlus['code[class*="language-"]'],
+                                    background: 'none',
+                                    fontSize: '0.875rem',
+                                    lineHeight: '1.6',
+                                  }
+                                }}
                                 language={language}
                                 PreTag="div"
+                                customStyle={{
+                                  margin: 0,
+                                  padding: '1rem',
+                                  background: 'var(--bg-secondary)',
+                                  fontSize: '0.875rem',
+                                  lineHeight: '1.6',
+                                  borderRadius: '0 0 0.75rem 0.75rem',
+                                }}
                                 {...props}
                               >
-                                {String(children)}
+                                {String(children).replace(/\n$/, '')}
                               </SyntaxHighlighter>
                             </div>
                           );
                         }
                         return (
-                          <code className={className} {...props}>
+                          <code 
+                            className={className} 
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              color: '#10a37f',
+                              padding: '0.125rem 0.375rem',
+                              borderRadius: '0.375rem',
+                              fontSize: '0.9em',
+                              fontFamily: 'var(--font-mono)',
+                              border: '1px solid rgba(255, 255, 255, 0.1)'
+                            }}
+                            {...props}
+                          >
                             {children}
                           </code>
                         );
-                      }
+                      },
+                      // Enhanced heading styles
+                      h1: ({children}) => (
+                        <h1 style={{ 
+                          fontSize: '1.875rem', 
+                          fontWeight: 700, 
+                          marginBottom: '1rem',
+                          color: 'rgba(255, 255, 255, 0.95)',
+                          lineHeight: 1.2
+                        }}>
+                          {children}
+                        </h1>
+                      ),
+                      h2: ({children}) => (
+                        <h2 style={{ 
+                          fontSize: '1.5rem', 
+                          fontWeight: 600, 
+                          marginBottom: '0.75rem',
+                          color: 'rgba(255, 255, 255, 0.95)',
+                          lineHeight: 1.3
+                        }}>
+                          {children}
+                        </h2>
+                      ),
+                      h3: ({children}) => (
+                        <h3 style={{ 
+                          fontSize: '1.25rem', 
+                          fontWeight: 600, 
+                          marginBottom: '0.75rem',
+                          color: 'rgba(255, 255, 255, 0.95)',
+                          lineHeight: 1.4
+                        }}>
+                          {children}
+                        </h3>
+                      ),
+                      // Enhanced paragraph styles
+                      p: ({children}) => (
+                        <p style={{ 
+                          marginBottom: '1rem',
+                          lineHeight: 1.7,
+                          color: 'rgba(255, 255, 255, 0.95)'
+                        }}>
+                          {children}
+                        </p>
+                      ),
+                      // Enhanced list styles
+                      ul: ({children}) => (
+                        <ul style={{ 
+                          marginBottom: '1rem',
+                          paddingLeft: '1.5rem',
+                          listStyle: 'disc'
+                        }}>
+                          {children}
+                        </ul>
+                      ),
+                      ol: ({children}) => (
+                        <ol style={{ 
+                          marginBottom: '1rem',
+                          paddingLeft: '1.5rem',
+                          listStyle: 'decimal'
+                        }}>
+                          {children}
+                        </ol>
+                      ),
+                      li: ({children}) => (
+                        <li style={{ 
+                          marginBottom: '0.5rem',
+                          lineHeight: 1.6,
+                          color: 'rgba(255, 255, 255, 0.9)'
+                        }}>
+                          {children}
+                        </li>
+                      ),
+                      // Enhanced link styles
+                      a: ({href, children}) => (
+                        <a 
+                          href={href}
+                          style={{ 
+                            color: '#10a37f',
+                            textDecoration: 'none',
+                            borderBottom: '1px solid transparent',
+                            transition: 'border-color 0.15s ease-out'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.borderBottomColor = '#10a37f';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.borderBottomColor = 'transparent';
+                          }}
+                        >
+                          {children}
+                        </a>
+                      ),
+                      // Enhanced blockquote styles
+                      blockquote: ({children}) => (
+                        <blockquote style={{
+                          borderLeft: '3px solid #10a37f',
+                          paddingLeft: '1rem',
+                          margin: '1rem 0',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontStyle: 'italic',
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          borderRadius: '0 0.5rem 0.5rem 0',
+                          padding: '1rem 1rem 1rem 1.5rem'
+                        }}>
+                          {children}
+                        </blockquote>
+                      ),
+                      // Enhanced table styles
+                      table: ({children}) => (
+                        <div style={{ 
+                          margin: '1rem 0',
+                          borderRadius: '0.75rem',
+                          overflow: 'hidden',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                          <table style={{ 
+                            width: '100%',
+                            borderCollapse: 'collapse'
+                          }}>
+                            {children}
+                          </table>
+                        </div>
+                      ),
+                      th: ({children}) => (
+                        <th style={{ 
+                          padding: '0.75rem 1rem',
+                          textAlign: 'left',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          fontWeight: 600,
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: 'rgba(255, 255, 255, 0.95)'
+                        }}>
+                          {children}
+                        </th>
+                      ),
+                      td: ({children}) => (
+                        <td style={{ 
+                          padding: '0.75rem 1rem',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                          color: 'rgba(255, 255, 255, 0.9)'
+                        }}>
+                          {children}
+                        </td>
+                      )
                     }}
                   >
                     {message.content}
@@ -175,12 +356,12 @@ const ChatMessages = ({ messages }) => {
                     >
                       {copiedMessage === index ? (
                         <>
-                          <FiCheck size={14} />
+                          <FiCheck size={12} />
                           <span>Copied!</span>
                         </>
                       ) : (
                         <>
-                          <FiCopy size={14} />
+                          <FiCopy size={12} />
                           <span>Copy</span>
                         </>
                       )}

@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiSend, FiLoader, FiPlus } from 'react-icons/fi';
+import { FiSend, FiLoader, FiPlus, FiPaperclip } from 'react-icons/fi';
 
 const ChatInput = ({ onSendMessage, disabled, placeholder, isLoading }) => {
   const [message, setMessage] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef(null);
   
   // Auto-resize textarea based on content
@@ -15,7 +16,7 @@ const ChatInput = ({ onSendMessage, disabled, placeholder, isLoading }) => {
   
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (message.trim() && !disabled) {
+    if (message.trim() && !disabled && !isLoading) {
       onSendMessage(message);
       setMessage('');
       
@@ -34,46 +35,72 @@ const ChatInput = ({ onSendMessage, disabled, placeholder, isLoading }) => {
     }
   };
   
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+  
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+  
+  const isMessageValid = message.trim().length > 0;
+  
   return (
     <div className="input-container">
       <div className="input-wrapper">
-        <form className="input-form" onSubmit={handleSubmit} style={{width: '100%', display: 'flex', alignItems: 'flex-end'}}>
+        <form className="input-form" onSubmit={handleSubmit}>
+          <button 
+            className="input-button attachment-button"
+            type="button" 
+            disabled={disabled}
+            aria-label="Add attachment"
+            title="Add attachment (Coming soon)"
+            style={{ opacity: 0.5 }} // Temporarily disabled
+          >
+            <FiPaperclip size={16} />
+          </button>
+          
           <textarea
             className="input-textarea"
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder={placeholder}
-            disabled={disabled}
+            disabled={disabled || isLoading}
             rows={1}
+            style={{
+              borderRadius: '1rem',
+              transition: 'all 0.15s ease-out',
+            }}
           />
-          <div className="input-actions">
-            <button 
-              className="input-button"
-              type="button" 
-              disabled={disabled}
-              aria-label="Add attachment"
-            >
-              <FiPlus />
-            </button>
-            <button 
-              className={`input-button send ${message.trim().length > 0 ? 'active' : ''}`}
-              type="submit" 
-              disabled={!message.trim() || disabled}
-              aria-label="Send message"
-            >
-              {isLoading ? (
-                <FiLoader className="loading-icon" style={{animation: 'spin 1s linear infinite'}} />
-              ) : (
-                <FiSend />
-              )}
-            </button>
-          </div>
+          
+          <button 
+            className={`input-button send ${isMessageValid && !disabled && !isLoading ? 'active' : ''}`}
+            type="submit" 
+            disabled={!isMessageValid || disabled || isLoading}
+            aria-label={isLoading ? "Sending..." : "Send message"}
+            title={isLoading ? "Sending..." : "Send message"}
+            style={{
+              transform: isMessageValid && !disabled && !isLoading ? 'scale(1.05)' : 'scale(1)',
+              transition: 'all 0.15s ease-out',
+            }}
+          >
+            {isLoading ? (
+              <FiLoader size={16} className="loading-icon" />
+            ) : (
+              <FiSend size={16} />
+            )}
+          </button>
         </form>
       </div>
+      
       <div className="input-footer">
-        opendeepwiki may produce inaccurate information about repositories or code, but less then a llm without opendeepwiki.
+        <span style={{ opacity: 0.7 }}>
+          opendeepwiki can make mistakes. Consider checking important information.
+        </span>
       </div>
     </div>
   );

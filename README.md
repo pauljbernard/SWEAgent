@@ -421,7 +421,8 @@ We welcome contributions! Here's how you can help:
 - [x] ✅ Modern glass-morphism UI with animations
 - [x] ✅ Enhanced Gemini Context Caching with conflict resolution
 - [x] ✅ Thread-safe session management
-- [ ] 🔄 Advanced RAG techniques for better cross-repository context
+- [ ] 🔄 Add support for anthropic extended context caching
+- [ ] 🔄 Even more Advanced RAG techniques for better cross-repository context
 - [ ] 🔄 File browser for multi-repository exploration
 - [ ] 🔄 Code generation and modification capabilities across repositories
 - [ ] 🔄 Integration with IDEs and editors

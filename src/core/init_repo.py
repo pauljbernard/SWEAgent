@@ -122,7 +122,12 @@ def create_cache(display_name: str, documentation: str, system_prompt: str, gemi
     # Configure Gemini API with the provided key or use the default
     configure_gemini_api(gemini_api_key)
     
-    # Delete old caches with the same display name
+    # Create a unique display name by adding timestamp and hash to avoid conflicts
+    timestamp = str(int(time.time()))
+    content_hash = hashlib.md5(documentation.encode()).hexdigest()[:8]
+    unique_display_name = f"{display_name}_{timestamp}_{content_hash}"
+    
+    # Delete old caches with the same base display name to prevent accumulation
     max_retries = 3
     retry_delay = 2 # seconds
     cache_list = None
@@ -144,20 +149,47 @@ def create_cache(display_name: str, documentation: str, system_prompt: str, gemi
     if cache_list is not None:
         logger.info(f"Result of caching.CachedContent.list(): {cache_list}")
         logger.info(f"Type of cache_list: {type(cache_list)}")
+        
+        # Clean up old caches for the same repository (keep only the most recent ones)
+        old_caches_for_repo = []
         for cache in cache_list:
             if cache is not None:
-                if cache.display_name == display_name:
-                    return cache.name
+                if cache.display_name.startswith(f"{display_name}_"):
+                    old_caches_for_repo.append(cache)
+                elif cache.display_name == display_name:
+                    # Handle old caches without timestamp format
+                    old_caches_for_repo.append(cache)
             else:
                 logger.warning("Encountered None value while iterating through cache_list")
-    cache = caching.CachedContent.create(
-        model=CONTEXT_CACHING_RETRIVER,
-        display_name=display_name,  # used to identify the cache
-        contents=documentation,
-        system_instruction=system_prompt,
-        ttl=datetime.timedelta(minutes=30),
-    )
-    return cache.name
+        
+        # Sort by creation time (if available) or name and keep only the 2 most recent
+        # to allow for graceful transitions
+        if len(old_caches_for_repo) > 2:
+            # Sort by display name (which includes timestamp) and delete older ones
+            old_caches_for_repo.sort(key=lambda x: x.display_name, reverse=True)
+            caches_to_delete = old_caches_for_repo[2:]  # Keep 2 most recent
+            
+            for cache_to_delete in caches_to_delete:
+                try:
+                    logger.info(f"Deleting old cache: {cache_to_delete.display_name}")
+                    cache_to_delete.delete()
+                except Exception as e:
+                    logger.warning(f"Failed to delete old cache {cache_to_delete.display_name}: {e}")
+    
+    # Create new cache with unique display name
+    try:
+        cache = caching.CachedContent.create(
+            model=CONTEXT_CACHING_RETRIVER,
+            display_name=unique_display_name,  # used to identify the cache
+            contents=documentation,
+            system_instruction=system_prompt,
+            ttl=datetime.timedelta(minutes=30),
+        )
+        logger.info(f"Created new cache with display_name: {unique_display_name}, cache_id: {cache.name}")
+        return cache.name
+    except Exception as e:
+        logger.error(f"Failed to create cache: {e}")
+        raise
 
 
 def delete_cache(display_name: str):

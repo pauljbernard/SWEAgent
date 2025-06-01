@@ -4,6 +4,7 @@ import api from './services/api';
 import ChatMessages from './components/chat/ChatMessages';
 import ChatInput from './components/chat/ChatInput';
 import ConfigModal from './components/sidebar/ConfigModal';
+import RepositoryManager from './components/RepositoryManager';
 
 // Simple function to generate a unique ID (fallback if uuid package fails)
 const generateUniqueId = () => {
@@ -55,6 +56,10 @@ const App = () => {
   const [statusMessage, setStatusMessage] = useState('');
   const [uploadStatus, setUploadStatus] = useState('');
   
+  // Multi-repository state
+  const [repositories, setRepositories] = useState({});
+  const [activeRepositories, setActiveRepositories] = useState([]);
+  
   // API keys state
   const [apiKeys, setApiKeys] = useState({
     GEMINI_API_KEY: localStorage.getItem('GEMINI_API_KEY') || '',
@@ -71,9 +76,12 @@ const App = () => {
   
   // Initialize or load active conversation when repo is initialized
   useEffect(() => {
-    if (repoParams.repo_name) {
+    // Use the first active repository or fallback to legacy repoParams
+    const primaryRepo = activeRepositories.length > 0 ? activeRepositories[0] : repoParams.repo_name;
+    
+    if (primaryRepo) {
       // Check if we have conversations for this repo
-      const repoConversations = conversations[repoParams.repo_name] || [];
+      const repoConversations = conversations[primaryRepo] || [];
       
       if (repoConversations.length > 0) {
         // If there are existing conversations, set the active one to the most recent
@@ -99,7 +107,7 @@ const App = () => {
         // Initialize the conversations object for this repo
         setConversations(prev => ({
           ...prev,
-          [repoParams.repo_name]: [
+          [primaryRepo]: [
             {
               id: newConversationId,
               name: "New conversation",
@@ -110,18 +118,20 @@ const App = () => {
         }));
       }
     }
-  }, [repoParams.repo_name]);
+  }, [activeRepositories, repoParams.repo_name]);
   
   // Save active conversation when chat history changes
   useEffect(() => {
-    if (repoParams.repo_name && activeConversationId && chatHistory.length > 0) {
+    const primaryRepo = activeRepositories.length > 0 ? activeRepositories[0] : repoParams.repo_name;
+    
+    if (primaryRepo && activeConversationId && chatHistory.length > 0) {
       // Filter out system messages before saving
       const historyToSave = chatHistory.filter(msg => msg.role !== 'system');
       
       if (historyToSave.length > 0) {
         // Update the conversation in the conversations state
         setConversations(prev => {
-          const repoConversations = prev[repoParams.repo_name] || [];
+          const repoConversations = prev[primaryRepo] || [];
           const conversationIndex = repoConversations.findIndex(conv => conv.id === activeConversationId);
           
           if (conversationIndex !== -1) {
@@ -136,7 +146,7 @@ const App = () => {
             
             return {
               ...prev,
-              [repoParams.repo_name]: updatedConversations
+              [primaryRepo]: updatedConversations
             };
           }
           
@@ -144,7 +154,7 @@ const App = () => {
         });
       }
     }
-  }, [chatHistory, repoParams.repo_name, activeConversationId]);
+  }, [chatHistory, activeRepositories, repoParams.repo_name, activeConversationId]);
   
   // Save conversations to localStorage when they change
   useEffect(() => {
@@ -173,7 +183,13 @@ const App = () => {
   }, []);
   
   const handleSendMessage = async (message) => {
-    if (!message.trim() || !repoParams.repo_name) return;
+    if (!message.trim()) return;
+    
+    // Check if we have any active repositories
+    if (activeRepositories.length === 0 && !repoParams.repo_name) {
+      setStatusMessage('Please initialize at least one repository before sending messages.');
+      return;
+    }
     
     try {
       setIsLoading(true);
@@ -187,55 +203,65 @@ const App = () => {
       const historyForApi = updatedHistory.filter(msg => msg.role !== 'system');
       
       console.log('Sending message with history:', historyForApi);
+      console.log('Active repositories:', activeRepositories);
       
-      // Call API to get response with API keys
+      // Call API to get response with API keys and target repositories
       const response = await api.sendMessage(
         message, 
         historyForApi, 
         selectedModel, 
         repoParams,
-        apiKeys // Pass the API keys to the API service
+        apiKeys,
+        activeRepositories.length > 0 ? activeRepositories : null
       );
       
       // Add assistant response to history
       const assistantMessage = { role: 'assistant', content: response };
-      setChatHistory([...updatedHistory, assistantMessage]);
+      setChatHistory(prev => [...prev, assistantMessage]);
       
-      console.log('Updated chat history:', [...updatedHistory, assistantMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
-      setChatHistory([
-        ...chatHistory,
-        { role: 'user', content: message },
-        { role: 'assistant', content: `Error: ${error.message || 'Failed to get response from server.'}` }
-      ]);
+      const errorMessage = { 
+        role: 'system', 
+        content: `Error: ${error.response?.data?.error || error.message}` 
+      };
+      setChatHistory(prev => [...prev, errorMessage]);
+      
+      // Remove error message after 5 seconds
+      setTimeout(() => {
+        setChatHistory(prev => prev.filter(msg => msg !== errorMessage));
+      }, 5000);
     } finally {
       setIsLoading(false);
     }
   };
   
   const handleInitRepo = async () => {
-    if (!repoUrl.trim()) return;
-    
+    if (!repoUrl.trim()) {
+      setStatusMessage('Please enter a repository URL');
+      return;
+    }
+
     try {
       setIsLoading(true);
-      setStatusMessage('Initializing repository...\nThis may take some time,\nif first time (not more then 10 minutes)...');
+      setStatusMessage('Initializing repository...');
       
-      const result = await api.initializeRepository(repoUrl, apiKeys);
+      const response = await api.initializeRepository(repoUrl, apiKeys);
       
-      // Check if we're switching to a different repository
-      if (repoParams.repo_name !== result.repo_params.repo_name) {
-        // Load chat history for the new repository if it exists
-        const historyKey = `chatHistory_${result.repo_params.repo_name}`;
-        const savedHistory = loadFromLocalStorage(historyKey, []);
-        setChatHistory(savedHistory);
+      if (response.all_repositories) {
+        setRepositories(response.all_repositories);
+        setActiveRepositories(Object.keys(response.all_repositories));
       }
       
-      setRepoParams(result.repo_params);
-      setStatusMessage(result.message);
+      if (response.repo_params) {
+        setRepoParams(response.repo_params);
+      }
+      
+      setStatusMessage(response.message);
+      setRepoUrl('');
     } catch (error) {
       console.error('Error initializing repository:', error);
-      setStatusMessage(`Error: ${error.message || 'Failed to initialize repository'}`);
+      setStatusMessage(`Error: ${error.response?.data?.error || error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -284,18 +310,19 @@ const App = () => {
   };
   
   const handleNewChat = () => {
-    if (!repoParams.repo_name) return;
+    const primaryRepo = activeRepositories.length > 0 ? activeRepositories[0] : repoParams.repo_name;
+    if (!primaryRepo) return;
     
     // Create a new conversation
     const newConversationId = generateUniqueId();
     
     // Add the new conversation to the conversations state
     setConversations(prev => {
-      const repoConversations = prev[repoParams.repo_name] || [];
+      const repoConversations = prev[primaryRepo] || [];
       
       return {
         ...prev,
-        [repoParams.repo_name]: [
+        [primaryRepo]: [
           {
             id: newConversationId,
             name: "New conversation",
@@ -315,10 +342,11 @@ const App = () => {
   };
   
   const handleSelectConversation = (conversationId) => {
-    if (!repoParams.repo_name) return;
+    const primaryRepo = activeRepositories.length > 0 ? activeRepositories[0] : repoParams.repo_name;
+    if (!primaryRepo) return;
     
     // Find the selected conversation
-    const repoConversations = conversations[repoParams.repo_name] || [];
+    const repoConversations = conversations[primaryRepo] || [];
     const selectedConversation = repoConversations.find(conv => conv.id === conversationId);
     
     if (selectedConversation) {
@@ -343,22 +371,23 @@ const App = () => {
   const handleDeleteConversation = (conversationId, e) => {
     e.stopPropagation(); // Prevent triggering the parent click event
     
-    if (!repoParams.repo_name) return;
+    const primaryRepo = activeRepositories.length > 0 ? activeRepositories[0] : repoParams.repo_name;
+    if (!primaryRepo) return;
     
     // Remove the conversation from the conversations state
     setConversations(prev => {
-      const repoConversations = prev[repoParams.repo_name] || [];
+      const repoConversations = prev[primaryRepo] || [];
       const updatedConversations = repoConversations.filter(conv => conv.id !== conversationId);
       
       return {
         ...prev,
-        [repoParams.repo_name]: updatedConversations
+        [primaryRepo]: updatedConversations
       };
     });
     
     // If the deleted conversation was active, set the first conversation as active
     if (conversationId === activeConversationId) {
-      const repoConversations = conversations[repoParams.repo_name] || [];
+      const repoConversations = conversations[primaryRepo] || [];
       const remainingConversations = repoConversations.filter(conv => conv.id !== conversationId);
       
       if (remainingConversations.length > 0) {
@@ -376,7 +405,7 @@ const App = () => {
       {/* Sidebar */}
       <div className="sidebar" style={{transform: sidebarVisible ? 'translateX(0)' : 'translateX(-100%)', position: 'fixed'}}>
         <div className="sidebar-header">
-          <button className="new-chat-button" onClick={handleNewChat} disabled={!repoParams.repo_name}>
+          <button className="new-chat-button" onClick={handleNewChat} disabled={activeRepositories.length === 0 && !repoParams.repo_name}>
             <FiPlus size={16} /> New chat
           </button>
           <button className="sidebar-close-button" onClick={toggleSidebar}>
@@ -395,33 +424,48 @@ const App = () => {
             Configure API Keys
           </button>
           
+          {/* Repository Management */}
+          <div className="separator"></div>
+          <RepositoryManager
+            repositories={repositories}
+            setRepositories={setRepositories}
+            apiKeys={apiKeys}
+            onStatusMessage={setStatusMessage}
+            activeRepositories={activeRepositories}
+            setActiveRepositories={setActiveRepositories}
+          />
+          
           {/* Conversations list */}
-          {repoParams.repo_name && (
+          {(activeRepositories.length > 0 || repoParams.repo_name) && (
             <>
+              <div className="separator"></div>
               <h3 className="sidebar-section-title">CONVERSATIONS</h3>
               <div className="conversations-list">
-                {conversations[repoParams.repo_name]?.map(conversation => (
-                  <div 
-                    key={conversation.id} 
-                    className={`conversation-item ${activeConversationId === conversation.id ? 'active' : ''}`}
-                    onClick={() => handleSelectConversation(conversation.id)}
-                  >
-                    <FiMessageSquare size={16} />
-                    <span className="conversation-name">{conversation.name}</span>
-                    <button 
-                      className="conversation-delete-button"
-                      onClick={(e) => handleDeleteConversation(conversation.id, e)}
-                      aria-label="Delete conversation"
+                {(() => {
+                  const primaryRepo = activeRepositories.length > 0 ? activeRepositories[0] : repoParams.repo_name;
+                  return conversations[primaryRepo]?.map(conversation => (
+                    <div 
+                      key={conversation.id} 
+                      className={`conversation-item ${activeConversationId === conversation.id ? 'active' : ''}`}
+                      onClick={() => handleSelectConversation(conversation.id)}
                     >
-                      <FiTrash2 size={14} />
-                    </button>
-                  </div>
-                ))}
+                      <FiMessageSquare size={16} />
+                      <span className="conversation-name">{conversation.name}</span>
+                      <button 
+                        className="conversation-delete-button"
+                        onClick={(e) => handleDeleteConversation(conversation.id, e)}
+                        aria-label="Delete conversation"
+                      >
+                        <FiTrash2 size={14} />
+                      </button>
+                    </div>
+                  ));
+                })()}
               </div>
-              
-              <div className="separator"></div>
             </>
           )}
+          
+          <div className="separator"></div>
           
           <h3 className="sidebar-section-title">MODEL</h3>
           <select 
@@ -438,39 +482,45 @@ const App = () => {
             <option value="Custom Documentalist">Custom Documentalist</option>
           </select>
           
-          <h3 className="sidebar-section-title">REPOSITORY</h3>
-          <input 
-            className="repo-input"
-            placeholder="Enter repository link" 
-            value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-          />
-          <button 
-            className="action-button primary"
-            onClick={handleInitRepo} 
-            disabled={isLoading || !repoUrl.trim()}
-          >
-            <FiGithub size={16} />
-            {isLoading ? 'Initializing...' : 'Initialize Repository'}
-          </button>
-          
-          <div className="separator"></div>
-          
-          <h3 className="sidebar-section-title">LOCAL REPOSITORY</h3>
-          <label className="file-upload-label">
-            <FiUpload size={16} />
-            Upload Repository (.zip)
-            <input 
-              type="file" 
-              accept=".zip" 
-              onChange={handleFileUpload}
-              disabled={isLoading}
-              style={{display: 'none'}}
-            />
-          </label>
-          
-          {uploadStatus && (
-            <div className="status-message">{uploadStatus}</div>
+          {/* Legacy single repository section - keep for backward compatibility */}
+          {Object.keys(repositories).length === 0 && (
+            <>
+              <div className="separator"></div>
+              <h3 className="sidebar-section-title">REPOSITORY</h3>
+              <input 
+                className="repo-input"
+                placeholder="Enter repository link" 
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+              />
+              <button 
+                className="action-button primary"
+                onClick={handleInitRepo} 
+                disabled={isLoading || !repoUrl.trim()}
+              >
+                <FiGithub size={16} />
+                {isLoading ? 'Initializing...' : 'Initialize Repository'}
+              </button>
+              
+              <div className="separator"></div>
+              
+              <h3 className="sidebar-section-title">LOCAL REPOSITORY</h3>
+              <label className="file-upload-label">
+                <FiUpload size={16} />
+                Upload Repository (.zip)
+                <input 
+                  type="file" 
+                  accept=".zip" 
+                  onChange={handleFileUpload}
+                  disabled={isLoading}
+                  style={{display: 'none'}}
+                />
+              </label>
+              
+              {uploadStatus && (
+                <div className="status-message">{uploadStatus}</div>
+              )}
+            </>
           )}
           
           {statusMessage && (
@@ -496,7 +546,14 @@ const App = () => {
               <rect width="24" height="24" rx="4" fill="#10a37f" />
               <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span style={{verticalAlign: 'middle'}}>{repoParams.repo_name ? `opendeepwiki - ${repoParams.repo_name}` : 'opendeepwiki'}</span>
+            <span style={{verticalAlign: 'middle'}}>
+              {activeRepositories.length > 0 
+                ? `opendeepwiki - ${activeRepositories.length} repo${activeRepositories.length > 1 ? 's' : ''} (${activeRepositories.join(', ')})` 
+                : repoParams.repo_name 
+                  ? `opendeepwiki - ${repoParams.repo_name}` 
+                  : 'opendeepwiki'
+              }
+            </span>
           </div>
           <button className="header-button">
             Share
@@ -510,9 +567,12 @@ const App = () => {
             <div className="empty-state">
               <h1 className="empty-state-title">What can I help with?</h1>
               <p className="empty-state-subtitle">
-                {repoParams.repo_name 
-                  ? `Ask me anything about the ${repoParams.repo_name} repository. I can help you understand the code, documentation, and more.` 
-                  : 'Initialize a repository from the sidebar to get started. You can use a GitHub URL or upload a local repository.'}
+                {activeRepositories.length > 0 
+                  ? `Ask me anything about the ${activeRepositories.length > 1 ? 'repositories' : 'repository'}: ${activeRepositories.join(', ')}. I can help you understand the code, documentation, and more.` 
+                  : repoParams.repo_name 
+                    ? `Ask me anything about the ${repoParams.repo_name} repository. I can help you understand the code, documentation, and more.` 
+                    : 'Initialize a repository from the sidebar to get started. You can use a GitHub URL or upload a local repository.'
+                }
               </p>
             </div>
           )}
@@ -520,9 +580,13 @@ const App = () => {
         
         <ChatInput 
           onSendMessage={handleSendMessage} 
-          disabled={!repoParams.repo_name || isLoading}
+          disabled={(activeRepositories.length === 0 && !repoParams.repo_name) || isLoading}
           isLoading={isLoading}
-          placeholder={repoParams.repo_name ? "Message opendeepwiki..." : "Initialize a repository to start chatting..."}
+          placeholder={
+            activeRepositories.length > 0 || repoParams.repo_name 
+              ? "Message opendeepwiki..." 
+              : "Initialize a repository to start chatting..."
+          }
         />
       </div>
       

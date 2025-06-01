@@ -12,6 +12,7 @@ import logging
 import traceback
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import threading
 
 # Pydantic models (moved from model_server.py)
 from pydantic import BaseModel, ConfigDict as PydanticConfigDict
@@ -64,12 +65,46 @@ executor = ThreadPoolExecutor(max_workers=40)
 # URL for Custom Documentalist (moved from model_server.py)
 custom_doc_url = "http://localhost:8001/score"
 
+# Multi-repository session management
+repository_sessions = {}
+session_lock = threading.Lock()
+
+def get_session_id():
+    """Generate a simple session ID. In production, use proper session management."""
+    # For simplicity, using a single global session. In production, implement proper session management.
+    return "global_session"
+
+def get_repositories_for_session(session_id):
+    """Get the list of repositories for a session."""
+    with session_lock:
+        return repository_sessions.get(session_id, {})
+
+def add_repository_to_session(session_id, repo_name, cache_id):
+    """Add a repository to the session."""
+    with session_lock:
+        if session_id not in repository_sessions:
+            repository_sessions[session_id] = {}
+        repository_sessions[session_id][repo_name] = {
+            'cache_id': cache_id,
+            'status': 'active',
+            'added_at': json.dumps({}),  # You could add timestamp here
+        }
+
+def remove_repository_from_session(session_id, repo_name):
+    """Remove a repository from the session."""
+    with session_lock:
+        if session_id in repository_sessions and repo_name in repository_sessions[session_id]:
+            del repository_sessions[session_id][repo_name]
+            return True
+        return False
+
 # Pydantic models for request and response (moved from model_server.py)
 class GenerateRequestModel(BaseModel):
     message: str
     model_name: str
     cache_id: str
     repo_name: str
+    target_repositories: list = None  # Optional list of repositories to query
     GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
@@ -81,7 +116,7 @@ class GenerateRequestModel(BaseModel):
 
 @app.route('/api/initialize', methods=['POST', 'OPTIONS'])
 def initialize_repo():
-    """Initialize a repository from a URL by directly calling the existing init_repo function"""
+    """Initialize the first repository or add to existing repositories"""
     if request.method == 'OPTIONS':
         return _build_cors_preflight_response()
     
@@ -103,9 +138,18 @@ def initialize_repo():
             repo_params, message = init_repo(repo_link, gemini_api_key) # from src.core.init_repo
             controller_logger.info(f"init_repo returned: {repo_params}, {message}")
             
+            # Add to session
+            session_id = get_session_id()
+            if repo_params and repo_params.get('repo_name') and repo_params.get('cache_id'):
+                add_repository_to_session(session_id, repo_params['repo_name'], repo_params['cache_id'])
+            
+            # Get all repositories for this session
+            all_repositories = get_repositories_for_session(session_id)
+            
             response = jsonify({
                 'repo_params': repo_params,
-                'message': message
+                'message': message,
+                'all_repositories': all_repositories
             })
             return response
             
@@ -115,6 +159,98 @@ def initialize_repo():
             
     except Exception as e:
         controller_logger.error(f"Error in initialize_repo endpoint: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/add_repo', methods=['POST', 'OPTIONS'])
+def add_repository():
+    """Add an additional repository to the current session"""
+    if request.method == 'OPTIONS':
+        return _build_cors_preflight_response()
+    
+    try:
+        data = request.get_json()
+        repo_link = data.get('repo_link', '')
+        
+        controller_logger.info(f"Received add repository request for repo: {repo_link}")
+        
+        if not repo_link:
+            return jsonify({'error': 'Repository link is required'}), 400
+        
+        try:
+            gemini_api_key = data.get('GEMINI_API_KEY', '')
+            
+            # Process the repository
+            repo_params, message = init_repo(repo_link, gemini_api_key)
+            controller_logger.info(f"init_repo returned: {repo_params}, {message}")
+            
+            # Add to session
+            session_id = get_session_id()
+            if repo_params and repo_params.get('repo_name') and repo_params.get('cache_id'):
+                add_repository_to_session(session_id, repo_params['repo_name'], repo_params['cache_id'])
+            
+            # Get all repositories for this session
+            all_repositories = get_repositories_for_session(session_id)
+            
+            response = jsonify({
+                'repo_params': repo_params,
+                'message': message,
+                'all_repositories': all_repositories
+            })
+            return response
+            
+        except Exception as e:
+            controller_logger.error(f"Error in add_repo call: {str(e)}", exc_info=True)
+            return jsonify({'error': str(e)}), 500
+            
+    except Exception as e:
+        controller_logger.error(f"Error in add_repository endpoint: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/list_repos', methods=['GET', 'OPTIONS'])
+def list_repositories():
+    """Get list of all repositories in the current session"""
+    if request.method == 'OPTIONS':
+        return _build_cors_preflight_response()
+    
+    try:
+        session_id = get_session_id()
+        all_repositories = get_repositories_for_session(session_id)
+        
+        return jsonify({
+            'repositories': all_repositories
+        })
+            
+    except Exception as e:
+        controller_logger.error(f"Error in list_repositories endpoint: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/remove_repo', methods=['POST', 'OPTIONS'])
+def remove_repository():
+    """Remove a repository from the current session"""
+    if request.method == 'OPTIONS':
+        return _build_cors_preflight_response()
+    
+    try:
+        data = request.get_json()
+        repo_name = data.get('repo_name', '')
+        
+        if not repo_name:
+            return jsonify({'error': 'Repository name is required'}), 400
+        
+        session_id = get_session_id()
+        success = remove_repository_from_session(session_id, repo_name)
+        
+        if success:
+            all_repositories = get_repositories_for_session(session_id)
+            return jsonify({
+                'message': f'Successfully removed repository: {repo_name}',
+                'all_repositories': all_repositories
+            })
+        else:
+            return jsonify({'error': f'Repository {repo_name} not found in session'}), 404
+            
+    except Exception as e:
+        controller_logger.error(f"Error in remove_repository endpoint: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/upload', methods=['POST', 'OPTIONS'])
@@ -154,11 +290,20 @@ def upload_repo():
                 repo_params, message = result
                 controller_logger.info(f"handle_zip_upload yielded: {repo_params}, {message}")
             
+            # Add to session
+            session_id = get_session_id()
+            if repo_params and repo_params.get('repo_name') and repo_params.get('cache_id'):
+                add_repository_to_session(session_id, repo_params['repo_name'], repo_params['cache_id'])
+            
+            # Get all repositories for this session
+            all_repositories = get_repositories_for_session(session_id)
+            
             shutil.rmtree(temp_dir)
             
             return jsonify({
                 'repo_params': repo_params,
-                'message': message
+                'message': message,
+                'all_repositories': all_repositories
             })
         except Exception as e:
             controller_logger.error(f"Error in handle_zip_upload call: {str(e)}", exc_info=True)
@@ -173,7 +318,7 @@ def upload_repo():
 @app.route('/api/generate', methods=['POST', 'OPTIONS'])
 def generate_response():
     """
-    Generate a response from the AI. This logic is moved from model_server.py.
+    Generate a response from the AI. Enhanced for multi-repository support.
     """
     if request.method == 'OPTIONS':
         return _build_cors_preflight_response()
@@ -187,6 +332,27 @@ def generate_response():
             return jsonify({'error': f"Invalid request payload: {pydantic_exc}"}), 400
 
         controller_logger.info(f"Received generate request for model: {req_data.model_name} with message: '{req_data.message[:100]}...'")
+
+        # Get repositories for multi-repo processing
+        session_id = get_session_id()
+        all_repositories = get_repositories_for_session(session_id)
+        
+        # Determine target repositories
+        target_repos = []
+        if req_data.target_repositories:
+            # Use specified repositories
+            target_repos = [repo for repo in req_data.target_repositories if repo in all_repositories]
+        elif req_data.repo_name and req_data.repo_name in all_repositories:
+            # Fallback to single repository for backward compatibility
+            target_repos = [req_data.repo_name]
+        elif all_repositories:
+            # Use all available repositories
+            target_repos = list(all_repositories.keys())
+        
+        if not target_repos:
+            return jsonify({'error': 'No repositories available for query. Please initialize at least one repository.'}), 400
+
+        controller_logger.info(f"Querying repositories: {target_repos}")
 
         # --- API Client Initialization (adapted from model_server.py) ---
         # Gemini clients
@@ -273,34 +439,113 @@ def generate_response():
             response_text = future.result()
 
         elif req_data.model_name == "Custom Documentalist":
-            payload = {
-                "repository_name": req_data.repo_name,
-                "cache_id": req_data.cache_id,
-                "user_problem": req_data.message,
-                "GEMINI_API_KEY": req_data.GEMINI_API_KEY,
-                "ANTHROPIC_API_KEY": req_data.ANTHROPIC_API_KEY,
-                "OPENAI_API_KEY": req_data.OPENAI_API_KEY,
-            }
-            try:
-                # Paths are assumed to be in a Docker context /app directory
-                with open(f"/app/docstrings_json/{req_data.repo_name}.json", "r") as f:
-                    payload["documentation"] = json.load(f)
-                # Typo "ducomentations_json" matches original model_server.py
-                with open(f"/app/ducomentations_json/{req_data.repo_name}.json", "r") as f:
-                    payload["documentation_md"] = json.load(f)
-                with open(f"/app/configs_json/{req_data.repo_name}.json", "r") as f:
-                    payload["config"] = json.load(f)
-            except FileNotFoundError as fnf_error:
-                controller_logger.error(f"JSON file not found for Custom Documentalist: {fnf_error}")
-                raise Exception(f"Required JSON file not found for {req_data.repo_name}: {fnf_error.filename}") from fnf_error
-            
-            def post_to_custom_documentalist():
-                return requests.post(custom_doc_url, json=payload, timeout=180) # Increased timeout
+            # Multi-repository Custom Documentalist processing
+            if len(target_repos) == 1:
+                # Single repository - use existing logic
+                repo_name = target_repos[0]
+                cache_id = all_repositories[repo_name]['cache_id']
+                
+                payload = {
+                    "repository_name": repo_name,
+                    "cache_id": cache_id,
+                    "user_problem": req_data.message,
+                    "GEMINI_API_KEY": req_data.GEMINI_API_KEY,
+                    "ANTHROPIC_API_KEY": req_data.ANTHROPIC_API_KEY,
+                    "OPENAI_API_KEY": req_data.OPENAI_API_KEY,
+                }
+                try:
+                    # Paths are assumed to be in a Docker context /app directory
+                    with open(f"/app/docstrings_json/{repo_name}.json", "r") as f:
+                        payload["documentation"] = json.load(f)
+                    # Typo "ducomentations_json" matches original model_server.py
+                    with open(f"/app/ducomentations_json/{repo_name}.json", "r") as f:
+                        payload["documentation_md"] = json.load(f)
+                    with open(f"/app/configs_json/{repo_name}.json", "r") as f:
+                        payload["config"] = json.load(f)
+                except FileNotFoundError as fnf_error:
+                    controller_logger.error(f"JSON file not found for Custom Documentalist: {fnf_error}")
+                    raise Exception(f"Required JSON file not found for {repo_name}: {fnf_error.filename}") from fnf_error
+                
+                def post_to_custom_documentalist():
+                    return requests.post(custom_doc_url, json=payload, timeout=180) # Increased timeout
 
-            future = executor.submit(post_to_custom_documentalist)
-            external_response = future.result()
-            external_response.raise_for_status() 
-            response_text = external_response.json()["libraire_response"]
+                future = executor.submit(post_to_custom_documentalist)
+                external_response = future.result()
+                external_response.raise_for_status() 
+                response_text = external_response.json()["libraire_response"]
+            else:
+                # Multi-repository processing - call repo_chat service with multiple repositories
+                payload = {
+                    "user_problem": req_data.message,
+                    "target_repositories": target_repos,
+                    "repository_data": {},
+                    "GEMINI_API_KEY": req_data.GEMINI_API_KEY,
+                    "ANTHROPIC_API_KEY": req_data.ANTHROPIC_API_KEY,
+                    "OPENAI_API_KEY": req_data.OPENAI_API_KEY,
+                }
+                
+                # Load data for each target repository
+                for repo_name in target_repos:
+                    cache_id = all_repositories[repo_name]['cache_id']
+                    try:
+                        with open(f"/app/docstrings_json/{repo_name}.json", "r") as f:
+                            documentation = json.load(f)
+                        with open(f"/app/ducomentations_json/{repo_name}.json", "r") as f:
+                            documentation_md = json.load(f)
+                        with open(f"/app/configs_json/{repo_name}.json", "r") as f:
+                            config = json.load(f)
+                        
+                        payload["repository_data"][repo_name] = {
+                            "cache_id": cache_id,
+                            "documentation": documentation,
+                            "documentation_md": documentation_md,
+                            "config": config
+                        }
+                    except FileNotFoundError as fnf_error:
+                        controller_logger.warning(f"JSON file not found for repository {repo_name}: {fnf_error}")
+                        # Continue with other repositories
+                        continue
+
+                # Call the multi-repo endpoint
+                multi_repo_url = "http://localhost:8001/multi_repo_score"
+                
+                def post_to_multi_repo_documentalist():
+                    return requests.post(multi_repo_url, json=payload, timeout=300) # Longer timeout for multi-repo
+
+                try:
+                    future = executor.submit(post_to_multi_repo_documentalist)
+                    external_response = future.result()
+                    external_response.raise_for_status()
+                    response_data = external_response.json()
+                    response_text = response_data["libraire_response"]
+                except requests.exceptions.ConnectionError:
+                    # Fallback: if multi-repo endpoint doesn't exist, process sequentially
+                    controller_logger.info("Multi-repo endpoint not available, falling back to sequential processing")
+                    responses = []
+                    for repo_name in target_repos:
+                        if repo_name in payload["repository_data"]:
+                            repo_data = payload["repository_data"][repo_name]
+                            single_payload = {
+                                "repository_name": repo_name,
+                                "cache_id": repo_data["cache_id"],
+                                "user_problem": f"[Repository: {repo_name}] {req_data.message}",
+                                "documentation": repo_data["documentation"],
+                                "documentation_md": repo_data["documentation_md"],
+                                "config": repo_data["config"],
+                                "GEMINI_API_KEY": req_data.GEMINI_API_KEY,
+                                "ANTHROPIC_API_KEY": req_data.ANTHROPIC_API_KEY,
+                                "OPENAI_API_KEY": req_data.OPENAI_API_KEY,
+                            }
+                            try:
+                                single_response = requests.post(custom_doc_url, json=single_payload, timeout=180)
+                                single_response.raise_for_status()
+                                repo_response = single_response.json()["libraire_response"]
+                                responses.append(f"## Response from {repo_name}:\n{repo_response}")
+                            except Exception as e:
+                                controller_logger.error(f"Error querying repository {repo_name}: {e}")
+                                responses.append(f"## Repository {repo_name}:\nError: {str(e)}")
+                    
+                    response_text = "\n\n".join(responses)
         
         else:
             return jsonify({'error': f"Unknown model_name: {req_data.model_name}"}), 400

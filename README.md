@@ -1,23 +1,41 @@
-# 🚀 OpenDeepWiki: AI-Powered Codebase Documentation & Chat
+# 🚀 OpenDeepWiki: AI-Powered Multi-Repository Documentation & Chat
 
-**OpenDeepWiki** is an AI-powered tool that helps you understand and interact with any codebase. It automatically analyzes repositories, generates comprehensive documentation, and provides an intelligent chat interface where you can ask questions about your code.
+**OpenDeepWiki** is an advanced AI-powered tool that helps you understand and interact with multiple codebases simultaneously. It automatically analyzes repositories, generates comprehensive documentation, and provides an intelligent chat interface where you can ask questions about your code across multiple projects.
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/Flopsky/OpenDeepWiki)
 
 ## ✨ Key Features
 
+### 🔄 **Multi-Repository Support**
+- **Multiple Repository Management**: Load and manage multiple repositories simultaneously
+- **Unified Chat Interface**: Ask questions across all your repositories in a single conversation
+- **Optimized Pipeline**: Efficient processing with individual context retrieval but unified AI response generation
+- **Repository Session Management**: Thread-safe handling of multiple repository sessions
+- **Smart Repository Toggling**: Activate/deactivate repositories for targeted queries
+
+### 🎨 **Modern UI Experience**
+- **Glass-morphism Design**: Beautiful modern interface with backdrop blur effects
+- **Animated Interactions**: Smooth hover effects, transitions, and loading animations
+- **Smart Status System**: Context-aware status messages with emoji indicators
+- **Professional Repository Cards**: Modern card design with gradient borders and hover effects
+- **Intuitive Repository Manager**: Easy-to-use interface for adding, removing, and managing repositories
+
+### 🧠 **Advanced AI Capabilities**
 - **🔍 Intelligent Code Analysis**: Automatically classifies and analyzes code files, documentation, and configuration files
-- **💬 AI-Powered Chat**: Ask questions about your codebase and get contextual answers from AI models that understand your specific code
-- **📚 Documentation Generation**: Extracts and processes docstrings, README files, and other documentation
+- **💬 Multi-Repository AI Chat**: Ask questions about your codebase and get contextual answers from AI models that understand your specific code across multiple projects
+- **📚 Cross-Repository Documentation**: Extracts and processes docstrings, README files, and documentation from all loaded repositories
+- **🤖 Multiple AI Models**: Choose from various Gemini, Claude, and OpenAI models
+- **⚡ Optimized Context Caching**: Gemini Context Caching with 30-minute TTL for cost-effective AI responses
+
+### 🔧 **Technical Excellence**
 - **🌐 Modern Web UI**: Clean, responsive React interface with conversation history, markdown rendering, and syntax highlighting
 - **🔗 Flexible Input**: Supports both GitHub repositories (via URL) and local repositories (via ZIP upload)
-- **🤖 Multiple AI Models**: Choose from various Gemini, Claude, and OpenAI models
 - **🐋 Containerized**: Fully containerized with Docker for easy deployment
-- **📊 Conversation Management**: Save, load, and manage multiple conversation threads
+- **📊 Advanced Conversation Management**: Save, load, and manage multiple conversation threads with repository context
 
 ## 🏗️ Architecture
 
-OpenDeepWiki uses a microservice architecture with the following components:
+OpenDeepWiki uses an optimized microservice architecture designed for multi-repository processing:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -34,12 +52,21 @@ OpenDeepWiki uses a microservice architecture with the following components:
                        └─────────────────┘
 ```
 
+### Optimized Multi-Repository Pipeline
+
+The architecture implements an efficient multi-repository processing pipeline:
+
+1. **Individual Repository Processing**: Each repository runs through steps 1-8 (query rewriting, context caching, retrieval) independently
+2. **Unified Response Generation**: All retrieved contexts are combined for a single call to the Final Response Generator
+3. **Cost Optimization**: Reduces AI API calls while maintaining comprehensive multi-repository awareness
+4. **Session Management**: Thread-safe handling of multiple repository sessions with conflict resolution
+
 ### Services
 
-- **Frontend (React + Vite)**: Modern web interface with TypeScript support
-- **Controller (Flask)**: API gateway handling initialization, file uploads, and request routing
-- **Indexer Service (FastAPI)**: Analyzes and classifies repository files, extracts documentation
-- **Repo Chat Service (FastAPI)**: Provides AI-powered responses using repository context
+- **Frontend (React + Vite)**: Modern web interface with TypeScript support and glass-morphism design
+- **Controller (Flask)**: Enhanced API gateway with multi-repository session management
+- **Indexer Service (FastAPI)**: Analyzes and classifies repository files, extracts documentation with conflict resolution
+- **Repo Chat Service (FastAPI)**: Provides AI-powered responses using multi-repository context aggregation
 
 ## 🚀 Quick Start
 
@@ -109,93 +136,108 @@ Open your browser and navigate to: **http://localhost:7860**
 
 ## 💡 How to Use
 
-### Loading a Repository
+### Managing Multiple Repositories
 
-1. **GitHub Repository**: 
-   - Paste the GitHub URL (e.g., `https://github.com/username/repo`) in the sidebar
-   - Click "Initialize" to clone and analyze the repository
+1. **Adding Repositories**:
+   - **GitHub Repository**: Click "Add Repository", paste the GitHub URL (e.g., `https://github.com/username/repo`)
+   - **Local Repository**: Click "Upload ZIP" and select your zipped repository
 
-2. **Local Repository**:
-   - Create a ZIP file of your local repository
-   - Use the "Upload Repository (.zip)" button in the sidebar
+2. **Repository Management**:
+   - **View All Repositories**: See all loaded repositories in the modern repository manager
+   - **Toggle Active/Inactive**: Use the toggle button to activate/deactivate repositories for queries
+   - **Remove Repositories**: Hover over repository cards to reveal the delete button
+   - **Status Monitoring**: Visual indicators show repository status (Ready, Loading, Error)
 
-### Chatting with Your Code
+### Multi-Repository Chat Experience
 
-1. Wait for the repository analysis to complete (status shown in sidebar)
-2. Select "Custom Documentalist" from the model dropdown
-3. Start asking questions about your codebase:
-   - "How does the authentication system work?"
-   - "What are the main components of this application?"
-   - "Explain the database schema"
-   - "Show me how to add a new feature"
+1. **Repository Selection**: 
+   - Activate the repositories you want to query by toggling them "on"
+   - The active repository count is displayed in the header
+   - Blue indicators show which repositories are active for queries
+
+2. **Cross-Repository Queries**:
+   - Ask questions that span multiple repositories: "Compare the authentication systems in my projects"
+   - Get unified responses that understand relationships between different codebases
+   - Responses automatically indicate which repositories contributed to the answer
+
+3. **Smart Context Management**:
+   - Each repository maintains its own optimized context cache
+   - Queries intelligently combine context from all active repositories
+   - Single AI call processes all repository contexts for cost efficiency
+
+### Example Multi-Repository Queries
+
+- "How do the authentication systems differ between my frontend and backend repositories?"
+- "What are the common patterns used across all my projects?"
+- "Show me how to integrate the API from repo A with the frontend from repo B"
+- "Compare the database schemas in my different microservices"
+- "What dependencies are shared across my repositories?"
 
 ### Managing Conversations
 
 - **New Chat**: Click "New Chat" to start a fresh conversation
 - **Switch Conversations**: Click on any saved conversation in the sidebar
 - **Delete Conversations**: Use the trash icon next to conversations
-- **Persistent History**: All conversations are automatically saved
+- **Repository Context**: Conversations remember which repositories were active
+- **Persistent History**: All conversations are automatically saved with repository context
 
-## 🧠 Gemini Context Caching Technology
+## 🧠 Advanced Gemini Context Caching Technology
 
-OpenDeepWiki leverages **Gemini Context Caching** to provide efficient and cost-effective AI responses about your codebase. This advanced technique is a core innovation that makes the system both fast and economical.
+OpenDeepWiki leverages **Gemini Context Caching** with an optimized multi-repository architecture to provide efficient and cost-effective AI responses across multiple codebases.
 
-### How Context Caching Works
+### Multi-Repository Context Caching
 
-1. **Repository Analysis**: When you load a repository, the system:
-   - Analyzes all code files, documentation, and configuration files
-   - Extracts docstrings, comments, and structural information
-   - Creates a comprehensive documentation JSON containing all relevant context
+1. **Individual Repository Analysis**: Each repository gets its own:
+   - Comprehensive documentation extraction and analysis
+   - Unique cached context with repository-specific display names
+   - Conflict resolution for duplicate repository names
+   - Independent cache lifecycle management
 
-2. **Cache Creation**: The extracted documentation is stored in a **Gemini cached context** with:
-   - **Display Name**: Repository identifier for easy management
-   - **System Instruction**: Expert developer persona tailored to your specific repository
-   - **Content**: Complete repository documentation and metadata
-   - **TTL**: 30-minute time-to-live for optimal performance
+2. **Optimized Cache Strategy**: 
+   - **Unique Display Names**: Repositories get unique identifiers using timestamps and content hashes
+   - **Cache Reuse**: Identical repositories automatically reuse existing caches
+   - **Cleanup Management**: Maintains 2 most recent caches per repository
+   - **Conflict Resolution**: Handles multiple repositories with similar names gracefully
 
-3. **Intelligent Retrieval**: When you ask questions:
-   - The system uses the cached context to understand your specific codebase
-   - Queries are processed against the pre-loaded repository knowledge
-   - Responses are generated with full awareness of your code structure and patterns
+3. **Unified Query Processing**:
+   - **Individual Processing**: Steps 1-8 (query rewriting, context retrieval) run separately for each active repository
+   - **Combined Context**: All repository contexts are aggregated for final response generation
+   - **Single AI Call**: Only one call to Final Response Generator, reducing costs while maintaining comprehensive awareness
+   - **Attribution**: Responses indicate which repositories contributed to the answer
 
 ### Technical Implementation
 
 ```python
-# Cache creation with repository documentation
+# Multi-repository pipeline optimization
+def run_multi_repo_pipeline(query, repositories):
+    contexts = []
+    
+    # Process each repository individually (steps 1-8)
+    for repo in repositories:
+        context = run_pipeline_up_to_context_retrieval(query, repo)
+        contexts.append(context)
+    
+    # Single unified response generation (step 9)
+    return generate_final_response(query, combined_contexts=contexts)
+
+# Enhanced cache creation with unique naming
 cache = caching.CachedContent.create(
     model=CONTEXT_CACHING_RETRIVER,
-    display_name=repository_name,
+    display_name=f"{repo_name}_{timestamp}_{hash}",
     contents=documentation_json,
     system_instruction=system_prompt,
     ttl=datetime.timedelta(minutes=30)
 )
-
-# Cached client for efficient queries
-client_gemini = instructor.from_gemini(
-    client=genai.GenerativeModel.from_cached_content(
-        cached_content=cache,
-        safety_settings=safety_config
-    ),
-    mode=instructor.Mode.GEMINI_JSON
-)
 ```
 
-### Benefits
+### Benefits for Multi-Repository Workflows
 
-- **⚡ Fast Response Times**: Pre-loaded context eliminates the need to re-process repository data for each query
-- **💰 Cost Efficiency**: Reduces token usage by avoiding repetitive context loading
-- **🎯 Accurate Responses**: AI has complete understanding of your specific codebase structure
-- **🔄 Persistent Knowledge**: Cache persists across multiple conversation sessions
-- **📊 Smart Management**: Automatic cache reuse for identical repositories
-
-### Cache Lifecycle
-
-1. **Creation**: Triggered when initializing a new repository
-2. **Reuse**: Existing caches are automatically detected and reused for the same repository
-3. **Refresh**: Cache is recreated if repository content changes significantly
-4. **Cleanup**: Automatic expiration after 30 minutes for optimal resource management
-
-This caching strategy ensures that OpenDeepWiki can provide instant, contextually-aware responses about your code while maintaining cost-effectiveness and system performance.
+- **⚡ Scalable Performance**: Parallel processing of repositories with optimized caching
+- **💰 Cost Efficiency**: Single AI call for final response while maintaining full multi-repo context
+- **🎯 Comprehensive Understanding**: AI has complete awareness of all active repository structures
+- **🔄 Smart Reuse**: Automatic cache detection and reuse across sessions
+- **📊 Advanced Management**: Sophisticated cache lifecycle with conflict resolution
+- **🔗 Cross-Repository Intelligence**: Understands relationships and patterns across multiple codebases
 
 ## 🛠️ Development
 
@@ -229,14 +271,20 @@ This caching strategy ensures that OpenDeepWiki can provide instant, contextuall
    npm run dev
    ```
 
-### Testing
+### Testing Multi-Repository Features
 
 ```bash
-# Test that all services are working
-python test_services.py
+# Test multi-repository API endpoints
+curl -X POST http://localhost:5050/api/add_repo \
+  -H "Content-Type: application/json" \
+  -d '{"repo_url": "https://github.com/user/repo1"}'
 
-# Run frontend tests
-cd frontend && npm test
+curl -X GET http://localhost:5050/api/list_repos
+
+# Test multi-repository chat
+curl -X POST http://localhost:8001/multi_repo_score \
+  -H "Content-Type: application/json" \
+  -d '{"repositories": [...]}'
 ```
 
 ### Makefile Commands
@@ -258,22 +306,25 @@ make prune-all      # Full cleanup including unused Docker objects
 ### Frontend
 - **React 19** with TypeScript
 - **Vite** for build tooling
-- **Styled Components** for styling
+- **Modern CSS** with glass-morphism effects
 - **React Router** for navigation
 - **React Markdown** for rendering
 - **React Syntax Highlighter** for code display
+- **Advanced Animations** with CSS keyframes
 
 ### Backend
 - **FastAPI** for microservices (Indexer, Repo Chat)
-- **Flask** for API gateway (Controller)
+- **Flask** for API gateway (Controller) with session management
 - **Pydantic** for data validation
 - **Python 3.12** runtime
+- **Thread-safe** multi-repository handling
 
 ### AI & APIs
-- **Google Gemini** (primary LLM)
+- **Google Gemini** (primary LLM with context caching)
 - **Anthropic Claude** (optional)
 - **OpenAI** (optional)
 - **Langfuse** (optional tracing)
+- **Optimized Pipeline** for multi-repository processing
 
 ### Infrastructure
 - **Docker** for containerization
@@ -286,7 +337,13 @@ make prune-all      # Full cleanup including unused Docker objects
 OpenDeepWiki/
 ├── frontend/               # React frontend application
 │   ├── src/
-│   │   ├── controler.py   # Flask API gateway
+│   │   ├── controler.py   # Flask API gateway with multi-repo support
+│   │   ├── components/
+│   │   │   └── RepositoryManager.jsx  # Multi-repository management
+│   │   ├── services/
+│   │   │   └── api.js     # Enhanced API with multi-repo endpoints
+│   │   ├── styles/
+│   │   │   └── opendeepwiki-theme.css # Modern UI styles
 │   │   └── ...            # React components and pages
 │   ├── package.json
 │   └── vite.config.js
@@ -295,13 +352,14 @@ OpenDeepWiki/
 │   ├── service.py        # Classification logic
 │   └── schema.py         # Data models
 ├── repo_chat/            # AI chat service
-│   ├── server.py         # FastAPI server
-│   ├── service.py        # Chat logic
+│   ├── server.py         # FastAPI server with multi-repo endpoints
+│   ├── service.py        # Enhanced chat logic with multi-repo pipeline
 │   └── schema.py         # Data models
 ├── src/                  # Core utilities and shared code
-│   ├── core/            # Core functionality
+│   ├── core/            # Core functionality with cache management
 │   ├── utils/           # Utility functions
 │   └── schemas/         # Shared data models
+├── MULTI_REPO_ARCHITECTURE.md  # Detailed architecture documentation
 ├── Dockerfile            # Container definition
 ├── supervisord.conf      # Process management
 ├── Makefile             # Build and deployment commands
@@ -327,8 +385,8 @@ OpenDeepWiki/
 | Service | Port | Description |
 |---------|------|-------------|
 | Frontend | 7860 | Main web interface |
-| Controller | 5050 | API gateway |
-| Repo Chat | 8001 | AI chat service |
+| Controller | 5050 | API gateway with multi-repo support |
+| Repo Chat | 8001 | AI chat service with multi-repo endpoints |
 | Indexer | 8002 | File analysis service |
 
 ## 🤝 Contributing
@@ -345,8 +403,10 @@ We welcome contributions! Here's how you can help:
 
 - Follow Python PEP 8 style guidelines
 - Use TypeScript for frontend development
+- Maintain backward compatibility when possible
 - Add tests for new features
 - Update documentation as needed
+- Consider multi-repository implications for new features
 
 ## 📋 Roadmap
 
@@ -357,11 +417,18 @@ We welcome contributions! Here's how you can help:
 - [x] ✅ Local repository upload via ZIP
 - [x] ✅ Modern React UI with TypeScript
 - [x] ✅ Docker containerization
-- [ ] 🔄 Advanced RAG techniques for better context
-- [ ] 🔄 File browser for repository exploration
-- [ ] 🔄 Code generation and modification capabilities
+- [x] ✅ Multi-repository support with optimized pipeline
+- [x] ✅ Modern glass-morphism UI with animations
+- [x] ✅ Enhanced Gemini Context Caching with conflict resolution
+- [x] ✅ Thread-safe session management
+- [ ] 🔄 Add support for anthropic extended context caching
+- [ ] 🔄 Even more Advanced RAG techniques for better cross-repository context
+- [ ] 🔄 File browser for multi-repository exploration
+- [ ] 🔄 Code generation and modification capabilities across repositories
 - [ ] 🔄 Integration with IDEs and editors
-- [ ] 🔄 Team collaboration features
+- [ ] 🔄 Team collaboration features with shared repository collections
+- [ ] 🔄 Repository dependency analysis and visualization
+- [ ] 🔄 Advanced repository comparison and diff features
 
 ## 🐛 Troubleshooting
 
@@ -371,12 +438,22 @@ We welcome contributions! Here's how you can help:
 2. **API errors**: Verify your API keys are correctly set in `.env`
 3. **Repository analysis fails**: Ensure the repository URL is accessible
 4. **Docker build fails**: Make sure you have sufficient disk space
+5. **Multi-repository conflicts**: Check repository manager for status indicators
+6. **Context caching errors**: Verify Gemini API key and check cache management
+
+### Multi-Repository Specific Issues
+
+1. **Repository not appearing**: Check the repository manager status and error messages
+2. **Queries not working across repositories**: Ensure repositories are toggled "active"
+3. **Cache conflicts**: Repository names are automatically made unique with timestamps
+4. **Performance issues**: Consider reducing the number of active repositories for large queries
 
 ### Getting Help
 
 - Check the [Issues](https://github.com/Flopsky/OpenDeepWiki/issues) page
 - Review the logs: `make logs`
 - Test services: `python test_services.py`
+- Review the detailed `MULTI_REPO_ARCHITECTURE.md` for technical details
 
 ## 📄 License
 
@@ -384,12 +461,15 @@ This project is licensed under the terms specified in the `license` file.
 
 ## 🙏 Acknowledgments
 
-- Built with ❤️ using modern web technologies
-- Powered by advanced AI language models
-- Inspired by the need for better code documentation and understanding
+- Built with ❤️ using modern web technologies and advanced AI capabilities
+- Powered by Google Gemini Context Caching for optimal performance
+- Inspired by the need for better multi-repository code documentation and understanding
+- Special thanks to the open-source community for the amazing tools and frameworks
 
 ---
 
-**Happy Coding!** 🚀
+**Happy Multi-Repository Coding!** 🚀
+
+Transform your development workflow with OpenDeepWiki's powerful multi-repository AI assistance. Whether you're working on microservices, multiple projects, or complex codebases, OpenDeepWiki helps you understand and navigate your code like never before.
 
 For questions, issues, or contributions, please visit our [GitHub repository](https://github.com/Flopsky/OpenDeepWiki).

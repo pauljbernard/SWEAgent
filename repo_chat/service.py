@@ -399,6 +399,7 @@ class Final_Response_Generator_Node(ClassifierConfig):
         ANTHROPIC_API_KEY: str = "",
         OPENAI_API_KEY: str = "",
         trace_id: str = "df8187ba-a07e-4ea9-9117-5a7662eaa063",
+        repository_name: str = "",
         ) -> str:
         span = get_langfuse_context().get("span")
         # Configure safety settings
@@ -412,16 +413,18 @@ class Final_Response_Generator_Node(ClassifierConfig):
             genai.configure()
 
         # Configure Anthropic client with API key from request if provided
-
+        repository_set = set()
         # Get file names from the documentation : files_list_md_config
         for file in files_list_md_config:
             file_id = int(file["file_id"])
             file_name = file["file_name"]
+            source_repository = file.get("source_repository", repository_name)
+            repository_set.add(source_repository)
             if ".md" in file_name:
                 path = documentation_md["documentation_md"][file_id]["file_paths"]
                 try:
                     with open(path, "r") as f:
-                        symstem_prompt += f"\n<{file_name}>\n" + f.read() + f"\n</{file_name}>"
+                        user_prompt += f"\n<repository_name:{source_repository}, file_name:{file_name}>\n" + f.read() + f"\n</repository_name:{source_repository}, file_name:{file_name}>"
                 except:
                     # raise Exception(
                     #     f"Error while reading the file {path}, {traceback.format_exc()}"
@@ -431,7 +434,7 @@ class Final_Response_Generator_Node(ClassifierConfig):
                 try:
                     path = config["config"][file_id]["file_paths"]
                     with open(path, "r") as f:
-                        symstem_prompt += f"\n<{file_name}>\n" + f.read() + f"\n</{file_name}>"
+                        user_prompt += f"\n<repository_name:{source_repository}, file_name:{file_name}>\n" + f.read() + f"\n</repository_name:{source_repository}, file_name:{file_name}>"
                 except:
                     # raise Exception(
                     #     f"Error while reading the file {path}, {traceback.format_exc()}"
@@ -441,18 +444,20 @@ class Final_Response_Generator_Node(ClassifierConfig):
         for file in files_list:
             file_id = int(file["file_id"])
             file_name = file["file_name"]
+            source_repository = file.get("source_repository", repository_name)
+            repository_set.add(source_repository)
             path = documentation["documentation"][file_id]["file_paths"]
             try:
                 with open(path, "r") as f:
-                    user_prompt += f"\n<{file_name}>\n" + f.read() + f"\n</{file_name}>"
+                    user_prompt += f"\n<repository_name:{source_repository}, file_name:{file_name}>\n" + f.read() + f"\n</repository_name:{source_repository}, file_name:{file_name}>"
             except:
                 raise Exception(
                     f"Error while reading the file {path}, {traceback.format_exc()}"
                 )
 
-        messages = []
-
         # Add system prompt if provided
+        symstem_prompt += f"\n\nThe *repositories you are working on are*: {repository_set}"
+        user_prompt += f"\n\nThe *repositories you are working on are*: *{repository_set}*"
 
         # Add user message
         try:
@@ -505,8 +510,13 @@ class Librairie_Service(ClassifierConfig):
         self.doc_context_retriver = Documentation_Context_Retriver_Node()
         self.context_caching_retriver = Context_Caching_Retriver_Node()
         self.final_response_generator = Final_Response_Generator_Node()
-    def run_pipeline(self, repository_name: str, cache_id: str, documentation: dict,
-            user_problem: str, documentation_md: dict, config_input: dict,GEMINI_API_KEY : str):
+    
+    def run_pipeline_up_to_context_retrieval(self, repository_name: str, cache_id: str, documentation: dict,
+            user_problem: str, documentation_md: dict, config_input: dict, GEMINI_API_KEY: str):
+        """
+        Run the pipeline up to context retrieval (steps 1-8) but don't call Final Response Generator.
+        Returns all the context needed for final response generation.
+        """
         
         trace_id = generate_trace_id()
 
@@ -522,9 +532,9 @@ class Librairie_Service(ClassifierConfig):
         )
         # 3. querry_rewriter
         querry_rewriter_output = self.querry_rewritter.querry_rewritter(
-            #TODO : ADD API KEY
             symstem_prompt=prompt_system_rewriter_output,
             user_prompt=prompt_user_rewriter_output,
+            GEMINI_API_KEY=GEMINI_API_KEY,
             trace_id=trace_id
         )
         # 4. prompt_system_librari_retriver
@@ -543,6 +553,7 @@ class Librairie_Service(ClassifierConfig):
             documentation=documentation,
             symstem_prompt=prompt_system_librari_retriver_output,
             user_prompt=user_prompt_librari_retriver_output,
+            GEMINI_API_KEY=GEMINI_API_KEY,
             trace_id=trace_id
         )
         
@@ -551,13 +562,153 @@ class Librairie_Service(ClassifierConfig):
             template_relative_path=self.prompts_config["user_prompt_configuration_retriver"],
             context={"user_problem": querry_rewriter_output}
         )
-        # 8. call final_response_generator node
+        # 8. call documentation_context_retriver node
         md_documentation_output = self.doc_context_retriver.documentation_context_retriver(
             symstem_prompt=prompt_system_librari_retriver_output, # Uses output from step 4
             user_prompt=user_prompt_config_retriver_output,
             config_doc=config_input, # This is inputs.config
             documentation_md=documentation_md,
+            GEMINI_API_KEY=GEMINI_API_KEY,
             trace_id=trace_id
+        )
+
+        # Return all context needed for final response generation
+        return {
+            "repository_name": repository_name,
+            "cache_id": cache_id,
+            "files_list": documentation_from_context_caching_retriver_output["files_list"],
+            "files_list_md_config": md_documentation_output["files_list"],
+            "documentation": documentation,
+            "documentation_md": documentation_md,
+            "config": config_input,
+            "rewritten_query": querry_rewriter_output
+        }
+    
+    def run_multi_repo_pipeline(self, repositories_data: dict, user_problem: str, GEMINI_API_KEY: str):
+        """
+        Run pipeline for multiple repositories.
+        Steps 1-8 are run for each repository individually.
+        Step 9-10 (Final Response Generator) is called once with all collected context.
+        
+        Args:
+            repositories_data: Dict with repo_name -> {cache_id, documentation, documentation_md, config}
+            user_problem: Original user query
+            GEMINI_API_KEY: API key for Gemini
+        """
+        
+        # Collect context from all repositories
+        all_repo_contexts = []
+        combined_files_list = []
+        combined_files_list_md_config = []
+        all_documentation = {}
+        all_documentation_md = {}
+        all_config = {}
+        
+        # Process each repository up to context retrieval
+        for repo_name, repo_data in repositories_data.items():
+            try:
+                logger.info(f"Processing repository: {repo_name}")
+                
+                repo_context = self.run_pipeline_up_to_context_retrieval(
+                    repository_name=repo_name,
+                    cache_id=repo_data["cache_id"],
+                    documentation=repo_data["documentation"],
+                    user_problem=user_problem,
+                    documentation_md=repo_data["documentation_md"],
+                    config_input=repo_data["config"],
+                    GEMINI_API_KEY=GEMINI_API_KEY
+                )
+                
+                all_repo_contexts.append(repo_context)
+                
+                # Combine files lists with repository context
+                for file_item in repo_context["files_list"]:
+                    file_item["source_repository"] = repo_name
+                    combined_files_list.append(file_item)
+                
+                for file_item in repo_context["files_list_md_config"]:
+                    file_item["source_repository"] = repo_name
+                    combined_files_list_md_config.append(file_item)
+                
+                # Combine documentation with repository prefixing
+                if "documentation" in repo_context["documentation"]:
+                    for doc_item in repo_context["documentation"]["documentation"]:
+                        doc_item["source_repository"] = repo_name
+                    all_documentation[f"{repo_name}_documentation"] = repo_context["documentation"]["documentation"]
+                
+                if "documentation_md" in repo_context["documentation_md"]:
+                    for doc_item in repo_context["documentation_md"]["documentation_md"]:
+                        doc_item["source_repository"] = repo_name
+                    all_documentation_md[f"{repo_name}_documentation_md"] = repo_context["documentation_md"]["documentation_md"]
+                
+                if "config" in repo_context["config"]:
+                    for config_item in repo_context["config"]["config"]:
+                        config_item["source_repository"] = repo_name
+                    all_config[f"{repo_name}_config"] = repo_context["config"]["config"]
+                
+                logger.info(f"Successfully processed context for repository: {repo_name}")
+                
+            except Exception as e:
+                logger.error(f"Error processing repository {repo_name}: {str(e)}")
+                # Continue with other repositories
+                continue
+        
+        if not all_repo_contexts:
+            raise Exception("No repositories were successfully processed")
+        
+        # Use the first repository's name for template context (or create a combined name)
+        primary_repo_name = list(repositories_data.keys())[0]
+        if len(repositories_data) > 1:
+            library_name = f"Multi-Repository ({', '.join(repositories_data.keys())})"
+        else:
+            library_name = str(primary_repo_name)
+        
+        # 9. Generate prompts for final answer
+        prompt_user_code_generator_output = self.template_manager.render_template(
+            template_relative_path=self.prompts_config["user_prompt_code_generator"],
+            context={"user_problem": user_problem}
+        )
+        prompt_system_code_generator_output = self.template_manager.render_template(
+            template_relative_path=self.prompts_config["system_prompt_code_generator"],
+            context={"library_name": library_name}
+        )
+
+        # 10. Call final_response_generator node ONCE with all collected context
+        logger.info(f"Calling Final Response Generator with context from {len(all_repo_contexts)} repositories")
+        
+        # Use the first repository's cache_id for the final call (or could be modified to handle multiple)
+        primary_cache_id = all_repo_contexts[0]["cache_id"]
+        
+        final_response_generator_output = self.final_response_generator.answer_user_querry_with_context(
+            files_list=combined_files_list,
+            files_list_md_config=combined_files_list_md_config,
+            documentation={"documentation": sum(all_documentation.values(), [])},
+            documentation_md={"documentation_md": sum(all_documentation_md.values(), [])},
+            config={"config": sum(all_config.values(), [])},
+            cache_id=primary_cache_id,
+            symstem_prompt=prompt_system_code_generator_output,
+            user_prompt=prompt_user_code_generator_output,
+            GEMINI_API_KEY=GEMINI_API_KEY,
+            trace_id=self.trace_id
+        )
+
+        return final_response_generator_output
+
+    def run_pipeline(self, repository_name: str, cache_id: str, documentation: dict,
+            user_problem: str, documentation_md: dict, config_input: dict, GEMINI_API_KEY: str):
+        """
+        Original single-repository pipeline - now uses the new context retrieval method
+        """
+        
+        # Get context from single repository
+        repo_context = self.run_pipeline_up_to_context_retrieval(
+            repository_name=repository_name,
+            cache_id=cache_id,
+            documentation=documentation,
+            user_problem=user_problem,
+            documentation_md=documentation_md,
+            config_input=config_input,
+            GEMINI_API_KEY=GEMINI_API_KEY
         )
 
         # 9. prompts for final answer
@@ -572,15 +723,17 @@ class Librairie_Service(ClassifierConfig):
 
         # 10. call final_response_generator node
         final_response_generator_output = self.final_response_generator.answer_user_querry_with_context(
-            files_list=documentation_from_context_caching_retriver_output["files_list"],
-            files_list_md_config=md_documentation_output["files_list"],
-            documentation=documentation,
-            documentation_md=documentation_md,
-            config=config_input,
-            cache_id=cache_id,
+            files_list=repo_context["files_list"],
+            files_list_md_config=repo_context["files_list_md_config"],
+            documentation=repo_context["documentation"],
+            documentation_md=repo_context["documentation_md"],
+            config=repo_context["config"],
+            cache_id=repo_context["cache_id"],
             symstem_prompt=prompt_system_code_generator_output,
             user_prompt=prompt_user_code_generator_output,
-            trace_id=trace_id
+            GEMINI_API_KEY=GEMINI_API_KEY,
+            trace_id=generate_trace_id(),
+            repository_name=repository_name
         )
 
         return final_response_generator_output

@@ -473,7 +473,7 @@ class Final_Response_Generator_Node(ClassifierConfig):
                 final_answer_generator = genai.GenerativeModel(
                     model_name=self.final_response_generator_model,
                     safety_settings=safe,
-                    generation_config={"temperature": 0.95, "top_p": 1, "max_output_tokens": 60000},
+                    generation_config={"temperature": 0, "top_p": 1, "max_output_tokens": 60000},
                 )
                 
                 logger.info(f"Generating response with Gemini API key...")
@@ -507,6 +507,8 @@ class Librairie_Service(ClassifierConfig):
         self.final_response_generator = Final_Response_Generator_Node()
     def run_pipeline(self, repository_name: str, cache_id: str, documentation: dict,
             user_problem: str, documentation_md: dict, config_input: dict,GEMINI_API_KEY : str):
+        
+        trace_id = generate_trace_id()
 
         # 1. prompt_user_rewriter
         prompt_user_rewriter_output = self.template_manager.render_template(
@@ -523,7 +525,7 @@ class Librairie_Service(ClassifierConfig):
             #TODO : ADD API KEY
             symstem_prompt=prompt_system_rewriter_output,
             user_prompt=prompt_user_rewriter_output,
-            trace_id=self.trace_id
+            trace_id=trace_id
         )
         # 4. prompt_system_librari_retriver
         prompt_system_librari_retriver_output = self.template_manager.render_template(
@@ -541,7 +543,7 @@ class Librairie_Service(ClassifierConfig):
             documentation=documentation,
             symstem_prompt=prompt_system_librari_retriver_output,
             user_prompt=user_prompt_librari_retriver_output,
-            trace_id=self.trace_id
+            trace_id=trace_id
         )
         
         # 7. user_prompt_config_retriver
@@ -555,7 +557,7 @@ class Librairie_Service(ClassifierConfig):
             user_prompt=user_prompt_config_retriver_output,
             config_doc=config_input, # This is inputs.config
             documentation_md=documentation_md,
-            trace_id=self.trace_id
+            trace_id=trace_id
         )
 
         # 9. prompts for final answer
@@ -578,7 +580,7 @@ class Librairie_Service(ClassifierConfig):
             cache_id=cache_id,
             symstem_prompt=prompt_system_code_generator_output,
             user_prompt=prompt_user_code_generator_output,
-            trace_id=self.trace_id
+            trace_id=trace_id
         )
 
         return final_response_generator_output

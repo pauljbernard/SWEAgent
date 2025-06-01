@@ -11,7 +11,7 @@ from langfuse import Langfuse
 
 import dotenv
 dotenv.load_dotenv()
-LANG_DISABLE_TRACING = os.getenv("LANG_DISABLE_TRACING", "false").lower() == "true"
+LANG_DISABLE_TRACING = os.getenv("LANG_DISABLE_TRACING", "true").lower() == "true"
 # Context variables for managing tracing context
 langfuse_span: ContextVar[Optional[Any]] = ContextVar("langfuse_span", default=None)
 langfuse_metadata: ContextVar[Optional[Dict]] = ContextVar(

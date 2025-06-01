@@ -33,6 +33,10 @@
 - **🐋 Containerized**: Fully containerized with Docker for easy deployment
 - **📊 Advanced Conversation Management**: Save, load, and manage multiple conversation threads with repository context
 
+
+<img width="1799" alt="exemple_1" src="https://github.com/user-attachments/assets/3ad1eef6-cff5-4c12-bcb3-550cd168cd23" />
+
+
 ## 🏗️ Architecture
 
 OpenDeepWiki uses an optimized microservice architecture designed for multi-repository processing:

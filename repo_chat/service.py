@@ -41,7 +41,7 @@ class ClassifierConfig:
         self.querry_rewriting_model = os.getenv("QUERRY_REWRITING_MODEL")
         self.documentation_context_retriver_model = os.getenv("DOCUMENTATION_CONTEXT_RETRIVER")
         self.context_caching_retriver_model = os.getenv("CONTEXT_CACHING_RETRIVER")
-        self.final_response_generator_model = os.getenv("FINAL_RESPONSE_GENERATOR")
+        self.final_response_generator_model = os.getenv("FINAL_ANSWER_GENERATOR")
         self.prompts_config = {
             "system_prompt_rewrite": "prompts/prompt_rewrite/system_prompt_rewrite.jinja2",
             "user_prompt_rewrite": "prompts/prompt_rewrite/user_prompt_rewrite.jinja2",

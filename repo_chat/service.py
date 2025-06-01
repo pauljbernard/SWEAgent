@@ -399,6 +399,7 @@ class Final_Response_Generator_Node(ClassifierConfig):
         ANTHROPIC_API_KEY: str = "",
         OPENAI_API_KEY: str = "",
         trace_id: str = "df8187ba-a07e-4ea9-9117-5a7662eaa063",
+        repository_name: str = "",
         ) -> str:
         span = get_langfuse_context().get("span")
         # Configure safety settings
@@ -417,7 +418,7 @@ class Final_Response_Generator_Node(ClassifierConfig):
         for file in files_list_md_config:
             file_id = int(file["file_id"])
             file_name = file["file_name"]
-            source_repository = file["source_repository"]
+            source_repository = file.get("source_repository", repository_name)
             repository_set.add(source_repository)
             if ".md" in file_name:
                 path = documentation_md["documentation_md"][file_id]["file_paths"]
@@ -443,7 +444,7 @@ class Final_Response_Generator_Node(ClassifierConfig):
         for file in files_list:
             file_id = int(file["file_id"])
             file_name = file["file_name"]
-            source_repository = file["source_repository"]
+            source_repository = file.get("source_repository", repository_name)
             repository_set.add(source_repository)
             path = documentation["documentation"][file_id]["file_paths"]
             try:
@@ -731,7 +732,8 @@ class Librairie_Service(ClassifierConfig):
             symstem_prompt=prompt_system_code_generator_output,
             user_prompt=prompt_user_code_generator_output,
             GEMINI_API_KEY=GEMINI_API_KEY,
-            trace_id=generate_trace_id()
+            trace_id=generate_trace_id(),
+            repository_name=repository_name
         )
 
         return final_response_generator_output

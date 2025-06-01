@@ -482,49 +482,17 @@ const App = () => {
             <option value="Custom Documentalist">Custom Documentalist</option>
           </select>
           
-          {/* Legacy single repository section - keep for backward compatibility */}
-          {Object.keys(repositories).length === 0 && (
-            <>
-              <div className="separator"></div>
-              <h3 className="sidebar-section-title">REPOSITORY</h3>
-              <input 
-                className="repo-input"
-                placeholder="Enter repository link" 
-                value={repoUrl}
-                onChange={(e) => setRepoUrl(e.target.value)}
-              />
-              <button 
-                className="action-button primary"
-                onClick={handleInitRepo} 
-                disabled={isLoading || !repoUrl.trim()}
-              >
-                <FiGithub size={16} />
-                {isLoading ? 'Initializing...' : 'Initialize Repository'}
-              </button>
-              
-              <div className="separator"></div>
-              
-              <h3 className="sidebar-section-title">LOCAL REPOSITORY</h3>
-              <label className="file-upload-label">
-                <FiUpload size={16} />
-                Upload Repository (.zip)
-                <input 
-                  type="file" 
-                  accept=".zip" 
-                  onChange={handleFileUpload}
-                  disabled={isLoading}
-                  style={{display: 'none'}}
-                />
-              </label>
-              
-              {uploadStatus && (
-                <div className="status-message">{uploadStatus}</div>
-              )}
-            </>
-          )}
-          
           {statusMessage && (
-            <div className="status-message">{statusMessage}</div>
+            <div className={`modern-status-message ${
+              statusMessage.includes('✅') ? 'success' : 
+              statusMessage.includes('❌') ? 'error' : 
+              statusMessage.includes('🔄') || statusMessage.includes('📦') || statusMessage.includes('🗑️') ? 'loading' :
+              'info'
+            }`}>
+              <div className="status-content">
+                {statusMessage}
+              </div>
+            </div>
           )}
         </div>
         

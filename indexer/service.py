@@ -562,6 +562,7 @@ class ClassifierService:
         self.trace_id = generate_trace_id()
         
     async def run_pipeline(self, folder_path: str, batch_size: int = 50, max_workers: int = 10, GEMINI_API_KEY: str = "", ANTHROPIC_API_KEY: str = "", OPENAI_API_KEY: str = ""):
+        trace_id = generate_trace_id()
         # Classifier Node
         classifier_result = await self.classifier_node.llmclassifier(
             folder_path, 
@@ -570,7 +571,7 @@ class ClassifierService:
             GEMINI_API_KEY, 
             ANTHROPIC_API_KEY, 
             OPENAI_API_KEY, 
-            trace_id=self.trace_id 
+            trace_id=trace_id 
         )
         # Information Compressor Node
         information_compressor_result = await self.information_compressor_node.summerizer(
@@ -580,7 +581,7 @@ class ClassifierService:
             GEMINI_API_KEY, 
             ANTHROPIC_API_KEY, 
             OPENAI_API_KEY, 
-            trace_id=self.trace_id  # Pass trace_id explicitly
+            trace_id=trace_id  # Pass trace_id explicitly
         )
         return information_compressor_result
 

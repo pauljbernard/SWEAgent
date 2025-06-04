@@ -468,19 +468,38 @@ const App = () => {
           <div className="separator"></div>
           
           <h3 className="sidebar-section-title">MODEL</h3>
-          <select 
+          <input 
             className="model-selector"
+            type="text"
+            list="app-model-suggestions"
             value={selectedModel} 
             onChange={(e) => setSelectedModel(e.target.value)}
-          >
-            <option value="gemini-1.5-flash-8b-001">gemini-1.5-flash-8b-001</option>
-            <option value="gemini-1.5-flash-002">gemini-1.5-flash-002</option>
-            <option value="gemini-1.5-pro-002">gemini-1.5-pro-002</option>
-            <option value="gemini-exp-1206">gemini-exp-1206</option>
-            <option value="gemini-2.0-flash-exp">gemini-2.0-flash-exp</option>
-            <option value="o3-high">o3-high</option>
-            <option value="Custom Documentalist">Custom Documentalist</option>
-          </select>
+            placeholder="Enter model name (e.g., gpt-4o, claude-3.5-sonnet)"
+          />
+          <datalist id="app-model-suggestions">
+            <option value="gemini-2.5-pro-preview-03-25" />
+            <option value="gemini-1.5-flash-8b-001" />
+            <option value="gemini-1.5-flash-002" />
+            <option value="gemini-1.5-pro-002" />
+            <option value="gemini-exp-1206" />
+            <option value="gemini-2.0-flash-exp" />
+            <option value="gpt-4o" />
+            <option value="gpt-4o-mini" />
+            <option value="gpt-3.5-turbo" />
+            <option value="o1-preview" />
+            <option value="o1-mini" />
+            <option value="o3-mini" />
+            <option value="claude-3.5-sonnet-20241022" />
+            <option value="claude-3.5-haiku-20241022" />
+            <option value="claude-3-opus-20240229" />
+          </datalist>
+          <div className="model-help-text">
+            <strong>Supported providers:</strong><br />
+            • Gemini models (gemini-*)<br />
+            • OpenAI models (gpt-*, o*)<br />
+            • Claude models (claude-*)<br />
+            Type any model name or select from suggestions.
+          </div>
           
           {statusMessage && (
             <div className={`modern-status-message ${

@@ -103,7 +103,7 @@ def get_openai_gpt4_1_response(system_prompt: str = None, user_prompt: str = Non
 
 def get_openai_o4_mini_response(user_prompt: str = None) -> str:
     response = client.responses.create(
-        model="o3",
+        model="o4-mini-2025-04-16",
         reasoning={"effort": "high"},
     input=[
         {"role": "user", "content": user_prompt}

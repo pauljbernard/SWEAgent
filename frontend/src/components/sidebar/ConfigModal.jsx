@@ -186,7 +186,7 @@ const ConfigModal = ({ isOpen, onClose, onSave }) => {
             theme={theme}
             required
           />
-          <HelpText theme={theme}>Required for Gemini models</HelpText>
+          <HelpText theme={theme}>Required for Gemini models (gemini-*). Get your key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a></HelpText>
         </FormGroup>
         
         <FormGroup>
@@ -200,7 +200,7 @@ const ConfigModal = ({ isOpen, onClose, onSave }) => {
             placeholder="Enter Anthropic API Key (optional)"
             theme={theme}
           />
-          <HelpText theme={theme}>Required for Claude models</HelpText>
+          <HelpText theme={theme}>Required for Claude models (claude-*). Get your key at <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Anthropic Console</a></HelpText>
         </FormGroup>
         
         <FormGroup>
@@ -214,7 +214,7 @@ const ConfigModal = ({ isOpen, onClose, onSave }) => {
             placeholder="Enter OpenAI API Key (optional)"
             theme={theme}
           />
-          <HelpText theme={theme}>Required for OpenAI models</HelpText>
+          <HelpText theme={theme}>Required for OpenAI models (gpt-*, o*). Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI Platform</a></HelpText>
         </FormGroup>
         
         <SaveButton 

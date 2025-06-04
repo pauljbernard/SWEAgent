@@ -193,8 +193,19 @@ body {
   border: 1px solid var(--chatgpt-border);
   background-color: rgba(0, 0, 0, 0.2);
   color: var(--chatgpt-text);
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
   font-size: var(--font-size-sm);
+}
+
+.model-selector::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.model-help-text {
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.4;
 }
 
 .repo-input {

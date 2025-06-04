@@ -89,7 +89,7 @@ const SectionTitle = styled.h2`
   }
 `;
 
-const ModelSelector = styled.select`
+const ModelSelector = styled.input`
   width: 100%;
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--border-radius);
@@ -98,6 +98,24 @@ const ModelSelector = styled.select`
   color: ${props => props.theme === 'dark' ? 'var(--text-light)' : 'var(--text-dark)'};
   margin-bottom: var(--spacing-md);
   font-size: var(--font-size-sm);
+  
+  &::placeholder {
+    color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)'};
+  }
+`;
+
+const ModelDatalist = styled.datalist`
+  background-color: ${props => props.theme === 'dark' ? 'rgba(0, 0, 0, 0.9)' : 'white'};
+  border: 1px solid ${props => props.theme === 'dark' ? 'var(--border-dark)' : 'var(--border-light)'};
+  border-radius: var(--border-radius);
+  color: ${props => props.theme === 'dark' ? 'var(--text-light)' : 'var(--text-dark)'};
+`;
+
+const ModelHelpText = styled.div`
+  font-size: var(--font-size-xs);
+  color: ${props => props.theme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)'};
+  margin-bottom: var(--spacing-md);
+  line-height: 1.4;
 `;
 
 const RepoInput = styled.input`
@@ -284,18 +302,37 @@ const LeftSidebar = ({
         
         <SectionTitle theme={theme}>MODEL</SectionTitle>
         <ModelSelector 
+          type="text"
+          list="model-suggestions"
           value={selectedModel} 
           onChange={(e) => setSelectedModel(e.target.value)}
+          placeholder="Enter model name (e.g., gpt-4o, claude-3.5-sonnet)"
           theme={theme}
-        >
-          <option value="gemini-1.5-flash-8b-001">gemini-1.5-flash-8b-001</option>
-          <option value="gemini-1.5-flash-002">gemini-1.5-flash-002</option>
-          <option value="gemini-1.5-pro-002">gemini-1.5-pro-002</option>
-          <option value="gemini-exp-1206">gemini-exp-1206</option>
-          <option value="gemini-2.0-flash-exp">gemini-2.0-flash-exp</option>
-          <option value="o3-high">o3-high</option>
-          <option value="Custom Documentalist">Custom Documentalist</option>
-        </ModelSelector>
+        />
+        <ModelDatalist id="model-suggestions" theme={theme}>
+          <option value="gemini-2.5-pro-preview-03-25" />
+          <option value="gemini-1.5-flash-8b-001" />
+          <option value="gemini-1.5-flash-002" />
+          <option value="gemini-1.5-pro-002" />
+          <option value="gemini-exp-1206" />
+          <option value="gemini-2.0-flash-exp" />
+          <option value="gpt-4o" />
+          <option value="gpt-4o-mini" />
+          <option value="gpt-3.5-turbo" />
+          <option value="o1-preview" />
+          <option value="o1-mini" />
+          <option value="o3-mini" />
+          <option value="claude-3.5-sonnet-20241022" />
+          <option value="claude-3.5-haiku-20241022" />
+          <option value="claude-3-opus-20240229" />
+        </ModelDatalist>
+        <ModelHelpText theme={theme}>
+          <strong>Supported providers:</strong><br />
+          • Gemini models (gemini-*)<br />
+          • OpenAI models (gpt-*, o*)<br />
+          • Claude models (claude-*)<br />
+          Type any model name or select from suggestions.
+        </ModelHelpText>
         
         <SectionTitle theme={theme}>REPOSITORY</SectionTitle>
         <RepoInput 

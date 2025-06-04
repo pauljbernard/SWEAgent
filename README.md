@@ -24,8 +24,9 @@
 - **🔍 Intelligent Code Analysis**: Automatically classifies and analyzes code files, documentation, and configuration files
 - **💬 Multi-Repository AI Chat**: Ask questions about your codebase and get contextual answers from AI models that understand your specific code across multiple projects
 - **📚 Cross-Repository Documentation**: Extracts and processes docstrings, README files, and documentation from all loaded repositories
-- **🤖 Multiple AI Models**: Choose from various Gemini, Claude, and OpenAI models
+- **🤖 Dynamic Model Selection**: Type any model name from any provider - supports Gemini, Claude, and OpenAI models with automatic routing
 - **⚡ Optimized Context Caching**: Gemini Context Caching with 30-minute TTL for cost-effective AI responses
+- **🎯 Universal Model Support**: Use cutting-edge models like `gpt-4.1`, `claude-4-sonnet`, `o3`, `gemini-2.5-pro` and more
 
 ### 🔧 **Technical Excellence**
 - **🌐 Modern Web UI**: Clean, responsive React interface with conversation history, markdown rendering, and syntax highlighting
@@ -152,6 +153,19 @@ Open your browser and navigate to: **http://localhost:7860**
    - **Remove Repositories**: Hover over repository cards to reveal the delete button
    - **Status Monitoring**: Visual indicators show repository status (Ready, Loading, Error)
 
+### Dynamic AI Model Selection
+
+1. **Choose Any Model**: Type any model name directly in the model selector
+   - **OpenAI**: `gpt-4o`, `gpt-4-turbo`, `gpt-3.5-turbo`, `o1-preview`, `o1-mini`, `o3-mini`
+   - **Anthropic**: `claude-3.5-sonnet-20241022`, `claude-3-haiku-20240307`, `claude-3-opus-20240229`
+   - **Google**: `gemini-2.5-pro-preview-03-25`, `gemini-1.5-flash-8b-001`, `gemini-1.5-pro-002`
+
+2. **Smart Auto-Complete**: Get suggestions for popular models while typing
+
+3. **Automatic Routing**: The system automatically detects which provider to use based on model name
+
+4. **API Key Management**: Configure API keys for each provider in the settings
+
 ### Multi-Repository Chat Experience
 
 1. **Repository Selection**: 
@@ -184,6 +198,33 @@ Open your browser and navigate to: **http://localhost:7860**
 - **Delete Conversations**: Use the trash icon next to conversations
 - **Repository Context**: Conversations remember which repositories were active
 - **Persistent History**: All conversations are automatically saved with repository context
+
+## 🤖 Universal AI Model Support
+
+OpenDeepWiki features **Dynamic Model Selection** that automatically routes requests to the appropriate AI provider based on the model name you type. This revolutionary approach means you can use any model from any supported provider without changing settings or configurations.
+
+### How It Works
+
+1. **Type Any Model Name**: Simply enter the model name in the model selector
+2. **Automatic Detection**: The system detects the provider based on naming patterns
+3. **Smart Routing**: Your request is automatically routed to the correct API
+4. **Seamless Experience**: All models work identically through the same interface
+
+### Supported Models
+
+| Provider | Model Examples | Naming Pattern |
+|----------|---------------|----------------|
+| **OpenAI** | `gpt-4o`, `gpt-4-turbo`, `gpt-3.5-turbo`, `o1-preview`, `o1-mini`, `o3-mini` | Contains `gpt` or starts with `o` |
+| **Anthropic** | `claude-3.5-sonnet-20241022`, `claude-3-haiku-20240307`, `claude-3-opus-20240229` | Contains `claude` |
+| **Google** | `gemini-2.5-pro-preview-03-25`, `gemini-1.5-flash-8b-001`, `gemini-1.5-pro-002` | Starts with `gemini-` |
+
+### Key Benefits
+
+- **🎯 Zero Configuration**: No need to change settings when switching models
+- **🚀 Future-Proof**: New models work automatically if they follow naming conventions
+- **💡 Intelligent**: Case-insensitive detection with smart fallbacks
+- **⚡ Unified Interface**: All models provide the same rich experience
+- **🔄 Easy Switching**: Try different models instantly to compare results
 
 ## 🧠 Advanced Gemini Context Caching Technology
 
@@ -324,9 +365,10 @@ make prune-all      # Full cleanup including unused Docker objects
 - **Thread-safe** multi-repository handling
 
 ### AI & APIs
-- **Google Gemini** (primary LLM with context caching)
-- **Anthropic Claude** (optional)
-- **OpenAI** (optional)
+- **Google Gemini** with context caching (gemini-*, automatic API routing)
+- **Anthropic Claude** (claude-*, automatic API routing)
+- **OpenAI GPT & Reasoning Models** (gpt-*, o*, automatic API routing)
+- **Dynamic Model Selection** with intelligent provider detection
 - **Langfuse** (optional tracing)
 - **Optimized Pipeline** for multi-repository processing
 
@@ -377,12 +419,21 @@ OpenDeepWiki/
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | ✅ Yes | Google Gemini API key for AI responses |
-| `ANTHROPIC_API_KEY` | ❌ No | Anthropic Claude API key (optional) |
-| `OPENAI_API_KEY` | ❌ No | OpenAI API key (optional) |
+| `GEMINI_API_KEY` | ✅ Yes | Google Gemini API key (required for gemini-* models) |
+| `ANTHROPIC_API_KEY` | ❌ No | Anthropic Claude API key (required for claude-* models) |
+| `OPENAI_API_KEY` | ❌ No | OpenAI API key (required for gpt-* and o* models) |
 | `LANGFUSE_PUBLIC_KEY` | ❌ No | Langfuse public key for tracing |
 | `LANGFUSE_SECRET_KEY` | ❌ No | Langfuse secret key for tracing |
 | `LANGFUSE_HOST` | ❌ No | Langfuse host URL |
+
+### Supported Model Patterns
+
+The system automatically routes to the correct provider based on model name:
+
+- **Gemini Models**: Any model starting with `gemini-` (e.g., `gemini-2.5-pro-preview-03-25`)
+- **OpenAI Models**: Any model containing `gpt` or starting with `o` (e.g., `gpt-4o`, `o1-preview`)
+- **Claude Models**: Any model containing `claude` (e.g., `claude-3.5-sonnet-20241022`)
+- **Fallback**: Unknown models default to Gemini for backward compatibility
 
 ### Ports
 
@@ -417,6 +468,8 @@ We welcome contributions! Here's how you can help:
 - [x] ✅ Basic repository analysis and indexing
 - [x] ✅ AI-powered chat interface
 - [x] ✅ Multiple LLM support (Gemini, Claude, OpenAI)
+- [x] ✅ Dynamic model selection with automatic provider routing
+- [x] ✅ Universal model support (gpt-4o, claude-3.5-sonnet, o1-preview, etc.)
 - [x] ✅ Conversation history management
 - [x] ✅ Local repository upload via ZIP
 - [x] ✅ Modern React UI with TypeScript
@@ -444,6 +497,23 @@ We welcome contributions! Here's how you can help:
 4. **Docker build fails**: Make sure you have sufficient disk space
 5. **Multi-repository conflicts**: Check repository manager for status indicators
 6. **Context caching errors**: Verify Gemini API key and check cache management
+
+### Model-Specific Issues
+
+1. **"API key required" errors**: 
+   - For `gpt-*` or `o*` models: Configure `OPENAI_API_KEY`
+   - For `claude-*` models: Configure `ANTHROPIC_API_KEY`
+   - For `gemini-*` models: Configure `GEMINI_API_KEY`
+
+2. **Model not recognized**: 
+   - Check the model name spelling
+   - Verify the model follows supported naming patterns
+   - Unknown models automatically default to Gemini
+
+3. **Model switching not working**: 
+   - Clear your browser cache
+   - Check the model selector shows your typed value
+   - Verify the correct API key is configured for the model type
 
 ### Multi-Repository Specific Issues
 

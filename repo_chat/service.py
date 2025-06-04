@@ -19,6 +19,8 @@ import google.generativeai as genai
 from pathlib import Path
 import logging
 import traceback
+from openai import OpenAI
+from anthropic import Anthropic, Timeout
 
 logger = logging.getLogger(__name__)
 
@@ -384,7 +386,7 @@ class Final_Response_Generator_Node(ClassifierConfig):
     def __init__(self):
         super().__init__()
 
-    @trace#TODO REMOVED HARDCODED MODEL NAME
+    @trace
     def answer_user_querry_with_context(
         self,
         files_list: dict,
@@ -395,6 +397,7 @@ class Final_Response_Generator_Node(ClassifierConfig):
         cache_id: str,
         symstem_prompt: str,
         user_prompt: str,
+        model_name: str = "",
         GEMINI_API_KEY: str = "",
         ANTHROPIC_API_KEY: str = "",
         OPENAI_API_KEY: str = "",
@@ -459,37 +462,148 @@ class Final_Response_Generator_Node(ClassifierConfig):
         symstem_prompt += f"\n\nThe *repositories you are working on are*: {repository_set}"
         user_prompt += f"\n\nThe *repositories you are working on are*: *{repository_set}*"
 
+        # Determine which SDK to use based on model name
+        def determine_sdk_type(model_name: str) -> str:
+            """Determine which SDK to use based on model name"""
+            model_lower = model_name.lower()
+            if "gpt" in model_lower or model_lower.startswith("o"):
+                return "openai"
+            elif "claude" in model_lower:
+                return "anthropic"
+            elif "gemini" in model_lower:
+                return "gemini"
+            else:
+                # Default to gemini for backward compatibility if model_name is empty or unrecognized
+                return "gemini"
+
+        # Use model_name if provided, otherwise fall back to environment variable
+        effective_model_name = model_name or self.final_response_generator_model
+        sdk_type = determine_sdk_type(effective_model_name)
+
         # Add user message
         try:
             if span:
                 generation = span.generation(
-                    name="gemini",
-                    model=self.final_response_generator_model,
+                    name=sdk_type,
+                    model=effective_model_name,
                     model_parameters={"temperature": 0, "top_p": 1, "max_new_tokens": 60000},
                     input={"system_prompt": symstem_prompt, "user_prompt": user_prompt},
                 )
 
-            # Use custom function to pass API key
-            if GEMINI_API_KEY:
-                logger.info(f"Using Gemini API key: {GEMINI_API_KEY}")
-                genai.configure(api_key=GEMINI_API_KEY)
+            Answer = None
+            usage_metadata = None
+
+            if sdk_type == "openai":
+                logger.info(f"Using OpenAI SDK with model: {effective_model_name}")
                 
-                logger.info(f"Creating new client instance with Gemini API key...")
+                openai_api_key = OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
+                if not openai_api_key:
+                    raise ValueError(f"OpenAI API key is required for model '{effective_model_name}'. Please configure your OpenAI API key in the settings.")
+                
+                openai_client = OpenAI(api_key=openai_api_key)
+                
+                # Handle different OpenAI model types
+                if effective_model_name.lower().startswith("o"):
+                    # Handle O-series models (reasoning models)
+                    logger.info(f"Using OpenAI reasoning model: {effective_model_name}")
+                    response = openai_client.chat.completions.create(
+                        model=effective_model_name,
+                        messages=[
+                            {"role": "system", "content": symstem_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        max_tokens=60000,
+                        temperature=0,
+                        top_p=1
+                    )
+                else:
+                    # Handle regular GPT models
+                    logger.info(f"Using OpenAI GPT model: {effective_model_name}")
+                    response = openai_client.chat.completions.create(
+                        model=effective_model_name,
+                        messages=[
+                            {"role": "system", "content": symstem_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        max_tokens=8000,
+                        temperature=0,
+                        top_p=1
+                    )
+                
+                # Create a mock Answer object with .text attribute for compatibility
+                class MockAnswer:
+                    def __init__(self, text, usage):
+                        self.text = text
+                        self.usage_metadata = usage
+                
+                class MockUsage:
+                    def __init__(self, prompt_tokens, completion_tokens):
+                        self.prompt_token_count = prompt_tokens
+                        self.candidates_token_count = completion_tokens
+                
+                Answer = MockAnswer(
+                    response.choices[0].message.content,
+                    MockUsage(response.usage.prompt_tokens, response.usage.completion_tokens)
+                )
+
+            elif sdk_type == "anthropic":
+                logger.info(f"Using Anthropic SDK with model: {effective_model_name}")
+                
+                anthropic_api_key = ANTHROPIC_API_KEY or os.getenv("ANTHROPIC_API_KEY")
+                if not anthropic_api_key:
+                    raise ValueError(f"Anthropic API key is required for model '{effective_model_name}'. Please configure your Anthropic API key in the settings.")
+                
+                anthropic_client = Anthropic(
+                    api_key=anthropic_api_key,
+                    timeout=Timeout(60.0 * 30, connect=5.0)  # 30 minutes timeout
+                )
+                
+                response = anthropic_client.messages.create(
+                    model=effective_model_name,
+                    max_tokens=60000,
+                    system=symstem_prompt,
+                    messages=[{"role": "user", "content": user_prompt}]
+                )
+                
+                # Create a mock Answer object with .text attribute for compatibility
+                class MockAnswer:
+                    def __init__(self, text, usage):
+                        self.text = text
+                        self.usage_metadata = usage
+                
+                class MockUsage:
+                    def __init__(self, prompt_tokens, completion_tokens):
+                        self.prompt_token_count = prompt_tokens
+                        self.candidates_token_count = completion_tokens
+                
+                Answer = MockAnswer(
+                    response.content[0].text,
+                    MockUsage(response.usage.input_tokens, response.usage.output_tokens)
+                )
+
+            elif sdk_type == "gemini":
+                logger.info(f"Using Gemini SDK with model: {effective_model_name}")
+                
+                # Configure Gemini with API key if provided
+                if GEMINI_API_KEY:
+                    genai.configure(api_key=GEMINI_API_KEY)
+                else:
+                    genai.configure()
+                
                 final_answer_generator = genai.GenerativeModel(
-                    model_name=self.final_response_generator_model,
+                    model_name=effective_model_name,
                     safety_settings=safe,
                     generation_config={"temperature": 0, "top_p": 1, "max_output_tokens": 60000},
                 )
                 
-                logger.info(f"Generating response with Gemini API key...")
                 Answer = final_answer_generator.generate_content(symstem_prompt + "\n" + user_prompt)
+
             else:
-                # Use the default function
-                Answer = get_gemini_pro_25_response(symstem_prompt + "\n" + user_prompt)
+                raise ValueError(f"Unsupported model '{effective_model_name}'. Please use models starting with 'gemini-', 'gpt-', 'o', or 'claude-'.")
 
             if span:
                 generation.end(
-                    output=f"# {self.final_response_generator_model} \n" + Answer.text,
+                    output=f"# {effective_model_name} \n" + Answer.text,
                     usage={
                         "input": Answer.usage_metadata.prompt_token_count,
                         "output": Answer.usage_metadata.candidates_token_count,
@@ -584,7 +698,7 @@ class Librairie_Service(ClassifierConfig):
             "rewritten_query": querry_rewriter_output
         }
     
-    def run_multi_repo_pipeline(self, repositories_data: dict, user_problem: str, GEMINI_API_KEY: str):
+    def run_multi_repo_pipeline(self, repositories_data: dict, user_problem: str, GEMINI_API_KEY: str, model_name: str = ""):
         """
         Run pipeline for multiple repositories.
         Steps 1-8 are run for each repository individually.
@@ -688,6 +802,7 @@ class Librairie_Service(ClassifierConfig):
             cache_id=primary_cache_id,
             symstem_prompt=prompt_system_code_generator_output,
             user_prompt=prompt_user_code_generator_output,
+            model_name=model_name,
             GEMINI_API_KEY=GEMINI_API_KEY,
             trace_id=self.trace_id
         )
@@ -695,7 +810,7 @@ class Librairie_Service(ClassifierConfig):
         return final_response_generator_output
 
     def run_pipeline(self, repository_name: str, cache_id: str, documentation: dict,
-            user_problem: str, documentation_md: dict, config_input: dict, GEMINI_API_KEY: str):
+            user_problem: str, documentation_md: dict, config_input: dict, GEMINI_API_KEY: str, model_name: str = ""):
         """
         Original single-repository pipeline - now uses the new context retrieval method
         """
@@ -731,6 +846,7 @@ class Librairie_Service(ClassifierConfig):
             cache_id=repo_context["cache_id"],
             symstem_prompt=prompt_system_code_generator_output,
             user_prompt=prompt_user_code_generator_output,
+            model_name=model_name,
             GEMINI_API_KEY=GEMINI_API_KEY,
             trace_id=generate_trace_id(),
             repository_name=repository_name
@@ -803,6 +919,7 @@ if __name__ == "__main__":
             user_problem=user_problem_test,
             documentation_md=documentation_md_input_test,
             config_input=config_input_test,
+            model_name="gemini-2.5-pro-preview-03-25",  # Test with a specific model
             GEMINI_API_KEY=os.getenv("GEMINI_API_KEY")  # Pass the API key here
         )
         print("\n--- Pipeline Execution Succeeded ---")

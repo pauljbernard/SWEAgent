@@ -402,32 +402,30 @@ const App = () => {
   
   return (
     <div className="app-container">
-      {/* Enhanced Sidebar */}
+      {/* Sidebar */}
       <div className="sidebar" style={{transform: sidebarVisible ? 'translateX(0)' : 'translateX(-100%)', position: 'fixed'}}>
         <div className="sidebar-header">
           <button className="new-chat-button" onClick={handleNewChat} disabled={activeRepositories.length === 0 && !repoParams.repo_name}>
-            <FiPlus size={16} /> 
-            <span>New chat</span>
+            <FiPlus size={16} /> New chat
           </button>
           <button className="sidebar-close-button" onClick={toggleSidebar}>
-            <FiX size={18} />
+            <FiX />
           </button>
         </div>
         
         <div className="sidebar-content">
           {/* API Configuration */}
-          <div>
-            <h3 className="sidebar-section-title">Configuration</h3>
-            <button 
-              className="action-button"
-              onClick={() => setConfigModalOpen(true)}
-            >
-              <FiSettings size={16} />
-              <span>Configure API Keys</span>
-            </button>
-          </div>
+          <h3 className="sidebar-section-title">API CONFIGURATION</h3>
+          <button 
+            className="action-button"
+            onClick={() => setConfigModalOpen(true)}
+          >
+            <FiSettings size={16} />
+            Configure API Keys
+          </button>
           
           {/* Repository Management */}
+          <div className="separator"></div>
           <RepositoryManager
             repositories={repositories}
             setRepositories={setRepositories}
@@ -439,8 +437,9 @@ const App = () => {
           
           {/* Conversations list */}
           {(activeRepositories.length > 0 || repoParams.repo_name) && (
-            <div>
-              <h3 className="sidebar-section-title">Conversations</h3>
+            <>
+              <div className="separator"></div>
+              <h3 className="sidebar-section-title">CONVERSATIONS</h3>
               <div className="conversations-list">
                 {(() => {
                   const primaryRepo = activeRepositories.length > 0 ? activeRepositories[0] : repoParams.repo_name;
@@ -463,28 +462,45 @@ const App = () => {
                   ));
                 })()}
               </div>
-            </div>
+            </>
           )}
           
-          {/* Model Selection */}
-          <div>
-            <h3 className="sidebar-section-title">Model</h3>
-            <select 
-              className="model-selector"
-              value={selectedModel} 
-              onChange={(e) => setSelectedModel(e.target.value)}
-            >
-              <option value="gemini-1.5-flash-8b-001">Gemini 1.5 Flash 8B</option>
-              <option value="gemini-1.5-flash-002">Gemini 1.5 Flash</option>
-              <option value="gemini-1.5-pro-002">Gemini 1.5 Pro</option>
-              <option value="gemini-exp-1206">Gemini Experimental</option>
-              <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
-              <option value="o3-high">OpenAI o3 High</option>
-              <option value="Custom Documentalist">Custom Documentalist</option>
-            </select>
+          <div className="separator"></div>
+          
+          <h3 className="sidebar-section-title">MODEL</h3>
+          <input 
+            className="model-selector"
+            type="text"
+            list="app-model-suggestions"
+            value={selectedModel} 
+            onChange={(e) => setSelectedModel(e.target.value)}
+            placeholder="Enter model name (e.g., gpt-4o, claude-3.5-sonnet)"
+          />
+          <datalist id="app-model-suggestions">
+            <option value="gemini-2.5-pro-preview-03-25" />
+            <option value="gemini-1.5-flash-8b-001" />
+            <option value="gemini-1.5-flash-002" />
+            <option value="gemini-1.5-pro-002" />
+            <option value="gemini-exp-1206" />
+            <option value="gemini-2.0-flash-exp" />
+            <option value="gpt-4o" />
+            <option value="gpt-4o-mini" />
+            <option value="gpt-3.5-turbo" />
+            <option value="o1-preview" />
+            <option value="o1-mini" />
+            <option value="o3-mini" />
+            <option value="claude-3.5-sonnet-20241022" />
+            <option value="claude-3.5-haiku-20241022" />
+            <option value="claude-3-opus-20240229" />
+          </datalist>
+          <div className="model-help-text">
+            <strong>Supported providers:</strong><br />
+            • Gemini models (gemini-*)<br />
+            • OpenAI models (gpt-*, o*)<br />
+            • Claude models (claude-*)<br />
+            Type any model name or select from suggestions.
           </div>
           
-          {/* Status Messages */}
           {statusMessage && (
             <div className={`modern-status-message ${
               statusMessage.includes('✅') ? 'success' : 
@@ -500,41 +516,42 @@ const App = () => {
         </div>
         
         <div className="sidebar-footer">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="24" height="24" rx="4" fill="#19c37d" />
-              <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-              opendeepwiki v1.0.0
-            </span>
-          </div>
-          <div style={{ fontSize: '0.7rem', opacity: 0.5, textAlign: 'center', marginTop: '0.25rem' }}>
-            AI-Powered Code Documentation Assistant
-          </div>
+          opendeepwiki v1.0.0 - AI-Powered Code Documentation Assistant
         </div>
       </div>
       
-      {/* Mobile menu button for when sidebar is hidden */}
-      {!sidebarVisible && (
-        <button className="mobile-menu-button" onClick={toggleSidebar}>
-          <FiMenu size={18} />
-        </button>
-      )}
-      
-      {/* Enhanced Main Content - NO HEADER */}
+      {/* Main Content */}
       <div className="main-content" style={{marginLeft: sidebarVisible ? '260px' : '0', width: sidebarVisible ? 'calc(100% - 260px)' : '100%', transition: 'margin-left 0.3s ease, width 0.3s ease'}}>
+        <div className="header">
+          {!sidebarVisible && (
+            <button className="header-button" onClick={toggleSidebar}>
+              <FiMenu />
+            </button>
+          )}
+          <div className="header-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '0.5rem', display: 'inline-block', verticalAlign: 'middle' }}>
+              <rect width="24" height="24" rx="4" fill="#10a37f" />
+              <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span style={{verticalAlign: 'middle'}}>
+              {activeRepositories.length > 0 
+                ? `opendeepwiki - ${activeRepositories.length} repo${activeRepositories.length > 1 ? 's' : ''} (${activeRepositories.join(', ')})` 
+                : repoParams.repo_name 
+                  ? `opendeepwiki - ${repoParams.repo_name}` 
+                  : 'opendeepwiki'
+              }
+            </span>
+          </div>
+          <button className="header-button">
+            Share
+          </button>
+        </div>
+        
         <div className="chat-container">
           {chatHistory.length > 0 ? (
             <ChatMessages messages={chatHistory} />
           ) : (
             <div className="empty-state">
-              <div style={{ marginBottom: '2rem' }}>
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.3 }}>
-                  <rect width="24" height="24" rx="4" fill="#19c37d" />
-                  <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
               <h1 className="empty-state-title">What can I help with?</h1>
               <p className="empty-state-subtitle">
                 {activeRepositories.length > 0 

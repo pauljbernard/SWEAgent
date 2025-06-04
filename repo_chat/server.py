@@ -21,6 +21,7 @@ class LibraireRequest(BaseModel):
     user_problem: str
     documentation_md: Dict[str, Any]
     config: Dict[str, Any]
+    model_name: str = ""
     GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
@@ -29,6 +30,7 @@ class MultiRepoRequest(BaseModel):
     user_problem: str
     target_repositories: List[str]
     repository_data: Dict[str, Dict[str, Any]]  # repo_name -> {cache_id, documentation, documentation_md, config}
+    model_name: str = ""
     GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
@@ -52,6 +54,7 @@ async def process_libraire_request(request: LibraireRequest):
             user_problem=request.user_problem,
             documentation_md=request.documentation_md,
             config_input=request.config,
+            model_name=request.model_name,
             GEMINI_API_KEY=request.GEMINI_API_KEY
         )
         
@@ -102,6 +105,7 @@ async def process_multi_repo_request(request: MultiRepoRequest):
         aggregated_response = repo_chat.run_multi_repo_pipeline(
             repositories_data=repositories_data,
             user_problem=request.user_problem,
+            model_name=request.model_name,
             GEMINI_API_KEY=request.GEMINI_API_KEY
         )
         

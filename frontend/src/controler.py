@@ -26,7 +26,7 @@ print(f"System path: {sys.path}")
 
 try:
     print("Attempting to import from src.core.init_repo...")
-    from src.core.init_repo import init_repo, handle_zip_upload
+    from src.core.init_repo import init_repo, handle_zip_upload, get_cache
     print("Successfully imported backend functions from src.core.init_repo")
 except Exception as general_e:
     print(f"An unexpected error occurred during import: {general_e}")
@@ -62,7 +62,7 @@ def get_repositories_for_session(session_id):
     with session_lock:
         return repository_sessions.get(session_id, {})
 
-def add_repository_to_session(session_id, repo_name, cache_id):
+def add_repository_to_session(session_id, repo_name, cache_id, repo_link=None, is_local=False):
     """Add a repository to the session."""
     with session_lock:
         if session_id not in repository_sessions:
@@ -71,6 +71,8 @@ def add_repository_to_session(session_id, repo_name, cache_id):
             'cache_id': cache_id,
             'status': 'active',
             'added_at': json.dumps({}),  # You could add timestamp here
+            'repo_link': repo_link,
+            'is_local': is_local,
         }
 
 def remove_repository_from_session(session_id, repo_name):
@@ -124,7 +126,7 @@ def initialize_repo():
             # Add to session
             session_id = get_session_id()
             if repo_params and repo_params.get('repo_name') and repo_params.get('cache_id'):
-                add_repository_to_session(session_id, repo_params['repo_name'], repo_params['cache_id'])
+                add_repository_to_session(session_id, repo_params['repo_name'], repo_params['cache_id'], repo_link=repo_link)
             
             # Get all repositories for this session
             all_repositories = get_repositories_for_session(session_id)
@@ -169,7 +171,7 @@ def add_repository():
             # Add to session
             session_id = get_session_id()
             if repo_params and repo_params.get('repo_name') and repo_params.get('cache_id'):
-                add_repository_to_session(session_id, repo_params['repo_name'], repo_params['cache_id'])
+                add_repository_to_session(session_id, repo_params['repo_name'], repo_params['cache_id'], repo_link=repo_link)
             
             # Get all repositories for this session
             all_repositories = get_repositories_for_session(session_id)
@@ -264,19 +266,14 @@ def upload_repo():
             api_key_preview = gemini_api_key[:5] + "..." if gemini_api_key and len(gemini_api_key) > 5 else gemini_api_key
             controller_logger.info(f"Received GEMINI_API_KEY for upload: {api_key_preview} (length: {len(gemini_api_key) if gemini_api_key else 0})")
             
-            generator = handle_zip_upload(temp_path, gemini_api_key) # from src.core.init_repo
+            repo_params, message = handle_zip_upload(temp_path, gemini_api_key) # from src.core.init_repo
             
-            repo_params = {"repo_name": "", "cache_id": ""}
-            message = "Processing..."
-            
-            for result in generator:
-                repo_params, message = result
-                controller_logger.info(f"handle_zip_upload yielded: {repo_params}, {message}")
+            controller_logger.info(f"handle_zip_upload yielded: {repo_params}, {message}")
             
             # Add to session
             session_id = get_session_id()
             if repo_params and repo_params.get('repo_name') and repo_params.get('cache_id'):
-                add_repository_to_session(session_id, repo_params['repo_name'], repo_params['cache_id'])
+                add_repository_to_session(session_id, repo_params['repo_name'], repo_params['cache_id'], repo_link=repo_params.get('repo_path'), is_local=True)
             
             # Get all repositories for this session
             all_repositories = get_repositories_for_session(session_id)
@@ -288,6 +285,7 @@ def upload_repo():
                 'message': message,
                 'all_repositories': all_repositories
             })
+            
         except Exception as e:
             controller_logger.error(f"Error in handle_zip_upload call: {str(e)}", exc_info=True)
             if 'temp_dir' in locals() and os.path.exists(temp_dir):
@@ -300,9 +298,6 @@ def upload_repo():
 
 @app.route('/api/generate', methods=['POST', 'OPTIONS'])
 def generate_response():
-    """
-    Generate a response from the AI. Enhanced for multi-repository support.
-    """
     if request.method == 'OPTIONS':
         return _build_cors_preflight_response()
 
@@ -315,11 +310,13 @@ def generate_response():
             return jsonify({'error': f"Invalid request payload: {pydantic_exc}"}), 400
 
         controller_logger.info(f"Received generate request for model: {req_data.model_name} with message: '{req_data.message[:100]}...'")
-
+        
+        gemini_api_key = req_data.GEMINI_API_KEY
+        
         # Get repositories for multi-repo processing
         session_id = get_session_id()
         all_repositories = get_repositories_for_session(session_id)
-        
+
         # Determine target repositories
         target_repos = []
         if req_data.target_repositories:
@@ -336,6 +333,10 @@ def generate_response():
             return jsonify({'error': 'No repositories available for query. Please initialize at least one repository.'}), 400
 
         controller_logger.info(f"Querying repositories: {target_repos}")
+
+        # Check and recreate cache for all target repositories
+        for repo_name in target_repos:
+            check_and_recreate_cache_if_expired(repo_name, gemini_api_key)
 
         # --- Unified Model Processing ---
         # All models now route through the repo_chat service with dynamic model selection
@@ -465,6 +466,45 @@ def generate_response():
         controller_logger.error(f"Error generating response: {e}", exc_info=True)
         return jsonify({'error': f"Internal server error: {str(e)}"}), 500
 
+def check_and_recreate_cache_if_expired(repo_name, gemini_api_key):
+    """Check if a repository's cache is expired and recreate it if necessary."""
+    session_id = get_session_id()
+    with session_lock:
+        repositories = repository_sessions.get(session_id, {})
+        repo_info = repositories.get(repo_name)
+
+        if not repo_info:
+            controller_logger.warning(f"Repository '{repo_name}' not found in session.")
+            return
+
+        cache_id = repo_info.get('cache_id')
+        repo_link = repo_info.get('repo_link')
+        is_local = repo_info.get('is_local', False)
+
+        if not cache_id or not repo_link:
+            controller_logger.warning(f"Cache ID or repo link missing for '{repo_name}'.")
+            return
+
+        # Check if the cache exists
+        cache = get_cache(cache_id, gemini_api_key)
+
+        if cache is None:
+            controller_logger.info(f"Cache for '{repo_name}' not found or expired. Recreating...")
+            try:
+                if is_local:
+                    new_repo_params, message = handle_zip_upload(repo_link, gemini_api_key)
+                else:
+                    new_repo_params, message = init_repo(repo_link, gemini_api_key)
+                
+                new_cache_id = new_repo_params.get('cache_id')
+                if new_cache_id:
+                    repository_sessions[session_id][repo_name]['cache_id'] = new_cache_id
+                    controller_logger.info(f"Successfully recreated cache for '{repo_name}'. New cache_id: {new_cache_id}")
+                else:
+                    controller_logger.error(f"Failed to get new cache_id for '{repo_name}'.")
+
+            except Exception as e:
+                controller_logger.error(f"Error recreating cache for '{repo_name}': {e}", exc_info=True)
 
 def _build_cors_preflight_response():
     response = jsonify({})

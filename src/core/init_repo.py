@@ -192,6 +192,34 @@ def create_cache(display_name: str, documentation: str, system_prompt: str, gemi
         raise
 
 
+def get_cache(cache_name: str, gemini_api_key=None):
+    """
+    Retrieves a cached content object by its name.
+
+    Args:
+        cache_name (str): The name of the cache to retrieve.
+        gemini_api_key (str, optional): The Gemini API key. Defaults to None.
+
+    Returns:
+        Optional[caching.CachedContent]: The cached content object if found, otherwise None.
+    """
+    try:
+        configure_gemini_api(gemini_api_key)
+        logger.info(f"Attempting to retrieve cache with name: {cache_name}")
+        cache = caching.CachedContent(name=cache_name)
+        # The following line is just to check if the cache exists.
+        # It will raise an exception if not found.
+        cache.update_time
+        logger.info(f"Successfully retrieved cache: {cache.display_name}")
+        return cache
+    except exceptions.NotFound:
+        logger.warning(f"Cache with name '{cache_name}' not found.")
+        return None
+    except Exception as e:
+        logger.error(f"An unexpected error occurred while retrieving cache '{cache_name}': {e}")
+        return None
+
+
 def delete_cache(display_name: str):
     # Delete old display name
     cache_list = caching.CachedContent.list()

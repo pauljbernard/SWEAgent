@@ -119,8 +119,11 @@ def initialize_repo():
             api_key_preview = gemini_api_key[:5] + "..." if gemini_api_key and len(gemini_api_key) > 5 else gemini_api_key
             controller_logger.info(f"Received GEMINI_API_KEY: {api_key_preview} (length: {len(gemini_api_key) if gemini_api_key else 0})")
             
+            openai_api_key = data.get('OPENAI_API_KEY', '')
+            controller_logger.info(f"Received OPENAI_API_KEY: {openai_api_key[:5] + '...' if openai_api_key and len(openai_api_key) > 5 else openai_api_key} (length: {len(openai_api_key) if openai_api_key else 0})")
+            
             controller_logger.info(f"Calling init_repo with {repo_link}")
-            repo_params, message = init_repo(repo_link, gemini_api_key) # from src.core.init_repo
+            repo_params, message = init_repo(repo_link, gemini_api_key, openai_api_key) # from src.core.init_repo
             controller_logger.info(f"init_repo returned: {repo_params}, {message}")
             
             # Add to session
@@ -163,9 +166,10 @@ def add_repository():
         
         try:
             gemini_api_key = data.get('GEMINI_API_KEY', '')
+            openai_api_key = data.get('OPENAI_API_KEY', '')
             
             # Process the repository
-            repo_params, message = init_repo(repo_link, gemini_api_key)
+            repo_params, message = init_repo(repo_link, gemini_api_key, openai_api_key)
             controller_logger.info(f"init_repo returned: {repo_params}, {message}")
             
             # Add to session
@@ -266,7 +270,10 @@ def upload_repo():
             api_key_preview = gemini_api_key[:5] + "..." if gemini_api_key and len(gemini_api_key) > 5 else gemini_api_key
             controller_logger.info(f"Received GEMINI_API_KEY for upload: {api_key_preview} (length: {len(gemini_api_key) if gemini_api_key else 0})")
             
-            repo_params, message = handle_zip_upload(temp_path, gemini_api_key) # from src.core.init_repo
+            openai_api_key = request.form.get('OPENAI_API_KEY', '')
+            controller_logger.info(f"Received OPENAI_API_KEY for upload: {openai_api_key[:5] + '...' if openai_api_key and len(openai_api_key) > 5 else openai_api_key} (length: {len(openai_api_key) if openai_api_key else 0})")
+            
+            repo_params, message = handle_zip_upload(temp_path, gemini_api_key, openai_api_key) # from src.core.init_repo
             
             controller_logger.info(f"handle_zip_upload yielded: {repo_params}, {message}")
             

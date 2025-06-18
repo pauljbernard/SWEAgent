@@ -36,10 +36,10 @@ class ClassifierConfig:
         self.template_manager = TemplateManager(default_search_dir=self.current_dir)
         self.prompts_config = {
         }
-        self.file_class_model_0 = os.getenv("FILE_CLASSICATION_MODEL_0")
-        self.file_class_model_1 = os.getenv("FILE_CLASSICATION_MODEL_1")
-        self.file_class_model_2 = os.getenv("FILE_CLASSICATION_MODEL_2")
-        self.file_class_model_3 = os.getenv("FILE_CLASSICATION_MODEL_3")
+        self.file_class_model_0 = os.getenv("GEMINI_MODEL_0")
+        self.file_class_model_1 = os.getenv("GEMINI_MODEL_1")
+        self.file_class_model_2 = os.getenv("GEMINI_MODEL_2")
+        self.file_class_model_3 = os.getenv("GEMINI_MODEL_3")
         self.querry_rewriting_model = os.getenv("QUERRY_REWRITING_MODEL")
         self.documentation_context_retriver_model = os.getenv("DOCUMENTATION_CONTEXT_RETRIVER")
         self.context_caching_retriver_model = os.getenv("CONTEXT_CACHING_RETRIVER")

@@ -15,8 +15,8 @@ classifier_service = ClassifierService()
 
 class ClassificationRequest(BaseModel):
     folder_path: str
-    batch_size: int = 50
-    max_workers: int = 10
+    batch_size: int = 10  # Ultra-small batches for maximum parallelism
+    max_workers: int = 100  # Maximum concurrency for ultra-fast processing
     GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
     OPENAI_API_KEY: str = ""

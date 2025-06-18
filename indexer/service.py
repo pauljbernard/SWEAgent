@@ -18,9 +18,11 @@ import dotenv
 import traceback
 import asyncio
 import google.generativeai as genai
+from openai import OpenAI
+import aiofiles
 import logging
 import traceback
-from src.monitor.langfuse import get_langfuse_context,trace,generate_trace_id
+from src.monitor.langfuse import get_langfuse_context, trace, generate_trace_id
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -43,11 +45,103 @@ class ClassifierConfig:
             "system_documentation": self.template_manager.render_template("prompts/prompt_documentations/system_prompt_documentation.jinja2"),
             "user_documentation": self.template_manager.render_template("prompts/prompt_documentations/user_prompt_documentation.jinja2"),
         }
-        self.file_class_model_0 = os.getenv("FILE_CLASSICATION_MODEL_0")
-        self.file_class_model_1 = os.getenv("FILE_CLASSICATION_MODEL_1")
-        self.file_class_model_2 = os.getenv("FILE_CLASSICATION_MODEL_2")
-        self.file_class_model_3 = os.getenv("FILE_CLASSICATION_MODEL_3")
+        # Dynamically gather all GEMINI_MODEL_* env variables so that
+        # adding new models is as simple as declaring them in the environment.
+        # This also preserves the legacy attributes (file_class_model_0 … _N)
+        # for backward-compatibility with the rest of the codebase.
+
+        self.file_class_models: list[str] = []
+        for i in range(20):  # support up to 20 models – adjust if ever needed
+            model_name = os.getenv(f"GEMINI_MODEL_{i}")
+            if model_name:
+                self.file_class_models.append(model_name)
+                setattr(self, f"file_class_model_{i}", model_name)
+
+        # Gather GPT models
+        self.gpt_models: list[str] = []
+        for i in range(20):
+            gpt_model = os.getenv(f"GPT_MODEL_{i}")
+            if gpt_model:
+                self.gpt_models.append(gpt_model)
+                setattr(self, f"gpt_model_{i}", gpt_model)
+                logger.info(f"Found GPT model: GPT_MODEL_{i} = {gpt_model}")
+
+        logger.info(f"Total GPT models found: {len(self.gpt_models)} - {self.gpt_models}")
+
+        if not self.file_class_models and not self.gpt_models:
+            raise ValueError("No GEMINI_MODEL_* or GPT_MODEL_* environment variables defined – at least one model is required.")
         
+        # Shared client pool for reuse across methods - initialized lazily
+        self._clients_cache = None
+        self._model_names_cache = None
+    
+    def _get_or_create_clients(self, GEMINI_API_KEY: str = "", OPENAI_API_KEY: str = ""):
+        """Get or create shared client pool for reuse across methods"""
+        logger.info(f"_get_or_create_clients called with GEMINI_API_KEY={'***' if GEMINI_API_KEY else 'empty'}, OPENAI_API_KEY={'***' if OPENAI_API_KEY else 'empty'}")
+        logger.info(f"Available models - Gemini: {self.file_class_models}, GPT: {self.gpt_models}")
+        cache_key = (bool(GEMINI_API_KEY), bool(OPENAI_API_KEY))
+        if self._clients_cache is not None and getattr(self, "_cache_key", None) == cache_key:
+            return self._clients_cache, self._model_names_cache
+            
+        # Configure safety settings
+        safe = SAFE
+
+        clients = {}
+        model_names = {}
+        idx = 0
+
+        # --- Gemini / Gemma models ---
+        if self.file_class_models:
+            if GEMINI_API_KEY:
+                genai.configure(api_key=GEMINI_API_KEY)
+            else:
+                genai.configure()
+
+            for model_name in self.file_class_models:
+                try:
+                    gem_client = instructor.from_gemini(
+                        client=genai.GenerativeModel(model_name=model_name, safety_settings=safe),
+                        mode=instructor.Mode.GEMINI_JSON,
+                    )
+                    clients[idx] = gem_client
+                    model_names[idx] = model_name
+                    idx += 1
+                except Exception as e:
+                    logger.error(f"Failed to create Gemini client for model {model_name}: {e}")
+
+        # --- GPT / OpenAI models ---
+        if OPENAI_API_KEY and self.gpt_models:
+            logger.info(f"Creating OpenAI clients for models: {self.gpt_models}")
+            try:
+                openai_client = OpenAI(api_key=OPENAI_API_KEY)
+                for gpt_model in self.gpt_models:
+                    # Create separate instructor client for each model to handle different model names
+                    openai_instructor = instructor.from_openai(
+                        client=openai_client,
+                        mode=instructor.Mode.JSON,
+                    )
+                    clients[idx] = openai_instructor
+                    model_names[idx] = gpt_model
+                    logger.info(f"Added OpenAI client for model {gpt_model} at index {idx}")
+                    idx += 1
+            except Exception as e:
+                logger.error(f"Failed to create OpenAI clients: {e}")
+        elif OPENAI_API_KEY:
+            logger.warning(f"OPENAI_API_KEY provided but no GPT models found. Available GPT models: {self.gpt_models}")
+        elif self.gpt_models:
+            logger.info(f"GPT models available ({self.gpt_models}) but no OPENAI_API_KEY provided")
+
+        if not clients:
+            raise RuntimeError("Unable to instantiate any LLM client. Check model names and credentials.")
+            
+        logger.info(f"Created {len(clients)} total clients: {list(model_names.values())}")
+        
+        # Cache for reuse
+        self._clients_cache = clients
+        self._model_names_cache = model_names
+        self._cache_key = cache_key
+        
+        return clients, model_names
 
 
 class ClassifierNode(ClassifierConfig):
@@ -81,21 +175,37 @@ class ClassifierNode(ClassifierConfig):
             )
 
         try:
-            # Run the blocking call in a thread pool to avoid blocking the event loop
-            completion, raw = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: client_gemini.chat.create_with_completion(
-                    messages=messages,
-                    response_model=create_file_classification(file_batch, scores),
-                    generation_config={
-                        "temperature": 0.0,
-                        "top_p": 1,
-                        "candidate_count": 1,
-                        "max_output_tokens": 8000,
-                    },
-                    max_retries=10,
+            # Detect if this is a Gemini or OpenAI client and use appropriate API
+            if "gemini" in model_name.lower() or "gemma" in model_name.lower():
+                # Gemini API
+                completion, raw = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: client_gemini.chat.create_with_completion(
+                        messages=messages,
+                        response_model=create_file_classification(file_batch, scores),
+                        generation_config={
+                            "temperature": 0.0,
+                            "top_p": 1,
+                            "candidate_count": 1,
+                            "max_output_tokens": 8000,
+                        },
+                        max_retries=3,
+                    )
                 )
-            )
+            else:
+                # OpenAI API
+                completion, raw = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: client_gemini.chat.completions.create_with_completion(
+                        model=model_name,
+                        messages=messages,
+                        response_model=create_file_classification(file_batch, scores),
+                        temperature=0.0,
+                        top_p=1,
+                        max_tokens=8000,
+                        max_retries=3,
+                    )
+                )
             result = completion.model_dump()
 
         except Exception as e:
@@ -122,8 +232,8 @@ class ClassifierNode(ClassifierConfig):
     async def llmclassifier(
         self,
         folder_path: str,
-        batch_size: int = 50,  # Number of files to process in each batch
-        max_workers: int = 10,  # Number of parallel workers
+        batch_size: int = 10,  # Ultra-small batches for maximum parallelism
+        max_workers: int = 100,  # Maximum concurrency for ultra-fast processing
         GEMINI_API_KEY: str = "",
         ANTHROPIC_API_KEY: str = "",
         OPENAI_API_KEY: str = "",
@@ -133,47 +243,9 @@ class ClassifierNode(ClassifierConfig):
 
         scores = [0]
 
-        # Configure safety settings
-        safe = SAFE
+        # Use shared client pool for better performance
+        clients, model_names = self._get_or_create_clients(GEMINI_API_KEY, OPENAI_API_KEY)
 
-        # Configure Gemini with API key from request if provided
-        if GEMINI_API_KEY:
-            genai.configure(api_key=GEMINI_API_KEY)
-        else:
-            # Use default API key from environment
-            genai.configure()
-            
-        client_gemini_0 = instructor.from_gemini(
-            client=genai.GenerativeModel(
-                model_name=self.file_class_model_0, safety_settings=safe
-            ),
-            mode=instructor.Mode.GEMINI_JSON,
-        )
-        client_gemini_1 = instructor.from_gemini(
-            client=genai.GenerativeModel(
-                model_name=self.file_class_model_1, safety_settings=safe
-            ),
-            mode=instructor.Mode.GEMINI_JSON,
-        )
-        client_gemini_2 = instructor.from_gemini(
-            client=genai.GenerativeModel(
-                model_name=self.file_class_model_2, safety_settings=safe
-            ),
-            mode=instructor.Mode.GEMINI_JSON,
-        )
-
-        clients = {
-            0: client_gemini_0,
-            1: client_gemini_1,
-            2: client_gemini_2,
-        }
-
-        model_names = {
-            0: self.file_class_model_0,
-            1: self.file_class_model_1,
-            2: self.file_class_model_2,
-        }
-        
         # Get file names
         files_structure = list_all_files(folder_path, include_md=True)
 
@@ -192,8 +264,8 @@ class ClassifierNode(ClassifierConfig):
         for index, batch in enumerate(batches):
             task = self.process_batch(
                 batch,
-                clients[index % 3],
-                model_names[index % 3],
+                clients[index % len(clients)],
+                model_names[index % len(clients)],
                 self.prompts_config["system_classification"],
                 self.prompts_config["user_classification"],
                 scores,
@@ -247,10 +319,11 @@ class InformationCompressorNode(ClassifierConfig):
         """Process a batch of files using Gemini API with timeout and retries."""
         batch_prompt = ""
         try:
-            with open(file_batch, "r") as f:
-                batch_prompt = user_prompt + "\n" + f.read()
+            # Use async file reading for non-blocking I/O
+            async with aiofiles.open(file_batch, "r") as f:
+                file_content = await f.read()
+                batch_prompt = user_prompt + "\n" + file_content
         except Exception as e:
-            print(f"Error reading file {file_batch}: {e}") # Log file reading error
             return None, None
 
         messages = [
@@ -286,30 +359,44 @@ class InformationCompressorNode(ClassifierConfig):
         last_status_message = ""
 
         for attempt, (current_client, current_model_name) in enumerate(clients_to_try):
-            print(f"Attempt {attempt + 1}/{len(clients_to_try)} for file {file_batch} using model {current_model_name}...")
             try:
                 # Use asyncio.wait_for for timeout instead of ThreadPoolExecutor
                 async def api_call_task():
-                    return await asyncio.get_event_loop().run_in_executor(
-                        None,
-                        lambda: current_client.chat.create_with_completion(
-                            messages=messages,
-                            response_model=pydantic_model,
-                            generation_config={
-                                "temperature": 0.0,
-                                "top_p": 1,
-                                "candidate_count": 1,
-                                "max_output_tokens": 8000,
-                            },
-                            max_retries=1, # Reduced internal retries as we have our own loop
+                    if "gemini" in current_model_name.lower() or "gemma" in current_model_name.lower():
+                        # Gemini API
+                        return await asyncio.get_event_loop().run_in_executor(
+                            None,
+                            lambda: current_client.chat.create_with_completion(
+                                messages=messages,
+                                response_model=pydantic_model,
+                                generation_config={
+                                    "temperature": 0.0,
+                                    "top_p": 1,
+                                    "candidate_count": 1,
+                                    "max_output_tokens": 8000,
+                                },
+                                max_retries=1,
+                            )
                         )
-                    )
+                    else:
+                        # OpenAI API
+                        return await asyncio.get_event_loop().run_in_executor(
+                            None,
+                            lambda: current_client.chat.completions.create_with_completion(
+                                model=current_model_name,
+                                messages=messages,
+                                response_model=pydantic_model,
+                                temperature=0.0,
+                                top_p=1,
+                                max_tokens=8000,
+                                max_retries=1,
+                            )
+                        )
 
-                completion, raw = await asyncio.wait_for(api_call_task(), timeout=15.0)
+                completion, raw = await asyncio.wait_for(api_call_task(), timeout=8.0)
 
                 # --- Success ---
                 result = completion.model_dump()
-                print(f"Success on attempt {attempt + 1} for file {file_batch}")
                 if generation:
                     # Update generation details for the successful attempt
                     generation.model = current_model_name
@@ -325,13 +412,11 @@ class InformationCompressorNode(ClassifierConfig):
                 return result, index
 
             except asyncio.TimeoutError:
-                last_status_message = f"Attempt {attempt + 1} timed out after 15s (Model: {current_model_name})"
-                print(last_status_message)
+                last_status_message = f"Attempt {attempt + 1} timed out after 5s (Model: {current_model_name})"
                 last_exception = asyncio.TimeoutError(last_status_message) # Store exception type
 
             except Exception as e:
                 last_status_message = f"Attempt {attempt + 1} failed (Model: {current_model_name}): {str(e)}, {traceback.format_exc()}"
-                print(last_status_message)
                 last_exception = e # Store the exception
 
             # Update generation span for failed attempt if it exists
@@ -340,7 +425,6 @@ class InformationCompressorNode(ClassifierConfig):
                 generation.model = current_model_name # Ensure model name reflects the failed attempt
 
         # --- All attempts failed ---
-        print(f"All {len(clients_to_try)} attempts failed for file {file_batch}. Last error: {last_status_message}")
         if generation:
             generation.end(
                 output=None,
@@ -353,8 +437,8 @@ class InformationCompressorNode(ClassifierConfig):
     async def summerizer(
         self,
         classified_files: dict,
-        batch_size: int = 50,  # Number of files to process in each batch
-        max_workers: int = 30,  # Number of parallel workers
+        batch_size: int = 10,  # Smaller batches for better parallelism
+        max_workers: int = 80,  # Number of parallel workers
         GEMINI_API_KEY: str = "",
         ANTHROPIC_API_KEY: str = "",
         OPENAI_API_KEY: str = "",
@@ -363,53 +447,8 @@ class InformationCompressorNode(ClassifierConfig):
         span = get_langfuse_context().get("span")
         scores = [0]
 
-        # Configure safety settings
-        safe = SAFE
-
-        # Configure Gemini with API key from request if provided
-        if GEMINI_API_KEY:
-            genai.configure(api_key=GEMINI_API_KEY)
-        else:
-            # Use default API key from environment
-            genai.configure()
-        client_gemini_0 = instructor.from_gemini(
-            client=genai.GenerativeModel(
-                model_name=self.file_class_model_0, safety_settings=safe
-            ),
-            mode=instructor.Mode.GEMINI_JSON,
-        )
-        client_gemini_1 = instructor.from_gemini(
-            client=genai.GenerativeModel(
-                model_name=self.file_class_model_1, safety_settings=safe
-            ),
-            mode=instructor.Mode.GEMINI_JSON,
-        )
-        client_gemini_2 = instructor.from_gemini(
-            client=genai.GenerativeModel(
-                model_name=self.file_class_model_2, safety_settings=safe
-            ),
-            mode=instructor.Mode.GEMINI_JSON,
-        )
-        client_gemini_3 = instructor.from_gemini(
-            client=genai.GenerativeModel(
-                model_name=self.file_class_model_3, safety_settings=safe
-            ),
-            mode=instructor.Mode.GEMINI_JSON,
-        )
-
-        clients = {
-            0: client_gemini_0,
-            1: client_gemini_1,
-            2: client_gemini_2,
-            3: client_gemini_3,
-        }
-
-        model_names = {
-            0: self.file_class_model_0,
-            1: self.file_class_model_1,
-            2: self.file_class_model_2,
-            3: self.file_class_model_3,
-        }
+        # Use shared client pool for better performance
+        clients, model_names = self._get_or_create_clients(GEMINI_API_KEY, OPENAI_API_KEY)
 
         # Prepare file lists for each category
         files_structure_docstring = []
@@ -445,11 +484,11 @@ class InformationCompressorNode(ClassifierConfig):
         file_to_category = {}
         
         for i, (file_path, category) in enumerate(all_files_to_process):
-            client_index = i % 4
+            client_index = i % len(clients)
             model_name = model_names[client_index]
             client = clients[client_index]
-            fallback_clients = [clients[j] for j in range(4) if j != client_index]
-            fallback_model_names = [model_names[j] for j in range(4) if j != client_index]
+            fallback_clients = [clients[j] for j in range(len(clients)) if j != client_index]
+            fallback_model_names = [model_names[j] for j in range(len(clients)) if j != client_index]
             
             if category == "docstring":
                 system_prompt = self.prompts_config["system_docstring"]
@@ -495,7 +534,6 @@ class InformationCompressorNode(ClassifierConfig):
             for i, result in enumerate(results):
                 file_path, category = file_to_category[i]
                 if isinstance(result, Exception):
-                    print(f"Batch processing failed for {file_path} ({category}): {str(result)}")
                     continue
                     
                 processed_result, identifier = result
@@ -508,7 +546,7 @@ class InformationCompressorNode(ClassifierConfig):
                         results_config[file_path] = processed_result
                         
         except Exception as e:
-            print(f"Error in asyncio.gather: {str(e)}, {traceback.format_exc()}")
+            pass
 
         # Structure the final output
         output_documentation = []
@@ -561,7 +599,7 @@ class ClassifierService:
         self.information_compressor_node = InformationCompressorNode()
         self.trace_id = generate_trace_id()
         
-    async def run_pipeline(self, folder_path: str, batch_size: int = 50, max_workers: int = 10, GEMINI_API_KEY: str = "", ANTHROPIC_API_KEY: str = "", OPENAI_API_KEY: str = ""):
+    async def run_pipeline(self, folder_path: str, batch_size: int = 10, max_workers: int = 100, GEMINI_API_KEY: str = "", ANTHROPIC_API_KEY: str = "", OPENAI_API_KEY: str = ""):
         trace_id = generate_trace_id()
         # Classifier Node
         classifier_result = await self.classifier_node.llmclassifier(

@@ -55,7 +55,9 @@ async def process_libraire_request(request: LibraireRequest):
             documentation_md=request.documentation_md,
             config_input=request.config,
             model_name=request.model_name,
-            GEMINI_API_KEY=request.GEMINI_API_KEY
+            GEMINI_API_KEY=request.GEMINI_API_KEY,
+            ANTHROPIC_API_KEY=request.ANTHROPIC_API_KEY,
+            OPENAI_API_KEY=request.OPENAI_API_KEY
         )
         
         logger.info("Libraire processing completed successfully")
@@ -106,7 +108,9 @@ async def process_multi_repo_request(request: MultiRepoRequest):
             repositories_data=repositories_data,
             user_problem=request.user_problem,
             model_name=request.model_name,
-            GEMINI_API_KEY=request.GEMINI_API_KEY
+            GEMINI_API_KEY=request.GEMINI_API_KEY,
+            ANTHROPIC_API_KEY=request.ANTHROPIC_API_KEY,
+            OPENAI_API_KEY=request.OPENAI_API_KEY
         )
         
         logger.info("Multi-repo processing completed successfully")

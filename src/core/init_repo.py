@@ -183,7 +183,7 @@ def create_cache(display_name: str, documentation: str, system_prompt: str, gemi
             display_name=unique_display_name,  # used to identify the cache
             contents=documentation,
             system_instruction=system_prompt,
-            ttl=datetime.timedelta(minutes=30),
+            ttl=datetime.timedelta(minutes=5),
         )
         logger.info(f"Created new cache with display_name: {unique_display_name}, cache_id: {cache.name}")
         return cache.name
@@ -232,7 +232,7 @@ def delete_cache(display_name: str):
 import os
 
 
-def process_repo_link(link: str, gemini_api_key=None):
+def process_repo_link(link: str, gemini_api_key=None, openai_api_key=None):
     display_name = link.split("/")[-1]
     documentation_path = f"docstrings_json/{display_name}.json"
     documentation_md_path = f"ducomentations_json/{display_name}.json"
@@ -286,7 +286,7 @@ Your task is to answer any question related to the documentation of the python r
             "max_workers": 10,
             "GEMINI_API_KEY": gemini_api_key,
             "ANTHROPIC_API_KEY": "",
-            "OPENAI_API_KEY": ""
+            "OPENAI_API_KEY": openai_api_key or ""
         }
         
         response = requests.post(url_file_classification, json=payload) # Use repo_path directly
@@ -319,7 +319,7 @@ Your task is to answer any question related to the documentation of the python r
     return cache_name
 
 
-def process_local_folder(repo_path_str: str, gemini_api_key=None):
+def process_local_folder(repo_path_str: str, gemini_api_key=None, openai_api_key=None):
     """
     Process a local repository folder that has already been copied to the shared volume.
 
@@ -379,7 +379,7 @@ Your task is to answer any question related to the documentation of the python r
             "max_workers": 10,
             "GEMINI_API_KEY": gemini_api_key,
             "ANTHROPIC_API_KEY": "",
-            "OPENAI_API_KEY": ""
+            "OPENAI_API_KEY": openai_api_key or ""
         }
         
         try:
@@ -603,7 +603,7 @@ Your task is to answer any question related to the documentation of the python r
                     "max_workers": 10,
                     "GEMINI_API_KEY": gemini_api_key,
                     "ANTHROPIC_API_KEY": "",
-                    "OPENAI_API_KEY": ""
+                    "OPENAI_API_KEY": openai_api_key
                 } # Use the path in the shared volume
             )
             
@@ -716,7 +716,7 @@ Your task is to answer any question related to the documentation of the python r
         # Do not fall back to full processing here, raise the error
         raise e
 
-def init_repo(repo_link, gemini_api_key=None):
+def init_repo(repo_link, gemini_api_key=None, openai_api_key=None):
     """Initialize repository and get parameters"""
     try:
         # Check if it's a local path (simple check, might need refinement)
@@ -756,10 +756,11 @@ def init_repo(repo_link, gemini_api_key=None):
                     Path(temp_repo_path), 
                     target_repo_path,
                     gemini_api_key,
+                    openai_api_key=openai_api_key,
                 )
         else:
             # Repository doesn't exist, process normally
-            cache_name = process_repo_link(repo_link, gemini_api_key)
+            cache_name = process_repo_link(repo_link, gemini_api_key, openai_api_key)
             
         logger.info(f"process_repo_link returned cache_name: {cache_name}")
         repo_params = {"repo_name": repo_name, "cache_id": cache_name}
@@ -776,7 +777,7 @@ def init_repo(repo_link, gemini_api_key=None):
         }, f"Error initializing repository via URL: {str(e)}"
 
 
-def handle_zip_upload(uploaded_zip_file, gemini_api_key=None):
+def handle_zip_upload(uploaded_zip_file, gemini_api_key=None, openai_api_key=None):
     """Handle zip file upload, extract, copy, and process it."""
     api_key_preview = gemini_api_key[:5] if gemini_api_key and len(gemini_api_key) >= 5 else gemini_api_key
     logger.info(f"Handling zip upload with GEMINI_API_KEY: {api_key_preview}... (length: {len(gemini_api_key) if gemini_api_key else 0})")
@@ -874,6 +875,7 @@ def handle_zip_upload(uploaded_zip_file, gemini_api_key=None):
                     temp_source_dir,
                     target_repo_path,
                     gemini_api_key,
+                    openai_api_key=openai_api_key,
                 )
                 
                 repo_params = {"repo_name": repo_name, "cache_id": cache_name}
@@ -925,7 +927,7 @@ def handle_zip_upload(uploaded_zip_file, gemini_api_key=None):
 
             # Now process the copied folder
             logger.info(f"Processing local folder: {target_repo_path}")
-            cache_name = process_local_folder(str(target_repo_path), gemini_api_key)
+            cache_name = process_local_folder(str(target_repo_path), gemini_api_key, openai_api_key)
             logger.info(f"process_local_folder returned cache_name: {cache_name}")
 
             repo_params = {"repo_name": repo_name, "cache_id": cache_name}

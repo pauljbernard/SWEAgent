@@ -36,10 +36,10 @@ class ClassifierConfig:
         self.template_manager = TemplateManager(default_search_dir=self.current_dir)
         self.prompts_config = {
         }
-        self.file_class_model_0 = os.getenv("FILE_CLASSICATION_MODEL_0")
-        self.file_class_model_1 = os.getenv("FILE_CLASSICATION_MODEL_1")
-        self.file_class_model_2 = os.getenv("FILE_CLASSICATION_MODEL_2")
-        self.file_class_model_3 = os.getenv("FILE_CLASSICATION_MODEL_3")
+        self.file_class_model_0 = os.getenv("GEMINI_MODEL_0")
+        self.file_class_model_1 = os.getenv("GEMINI_MODEL_1")
+        self.file_class_model_2 = os.getenv("GEMINI_MODEL_2")
+        self.file_class_model_3 = os.getenv("GEMINI_MODEL_3")
         self.querry_rewriting_model = os.getenv("QUERRY_REWRITING_MODEL")
         self.documentation_context_retriver_model = os.getenv("DOCUMENTATION_CONTEXT_RETRIVER")
         self.context_caching_retriver_model = os.getenv("CONTEXT_CACHING_RETRIVER")
@@ -549,7 +549,31 @@ class Final_Response_Generator_Node(ClassifierConfig):
             elif sdk_type == "anthropic":
                 logger.info(f"Using Anthropic SDK with model: {effective_model_name}")
                 
-                anthropic_api_key = ANTHROPIC_API_KEY or os.getenv("ANTHROPIC_API_KEY")
+                # Debug API key sources
+                logger.info(f"ANTHROPIC_API_KEY parameter: {'***' if ANTHROPIC_API_KEY else 'empty/None'}")
+                logger.info(f"ANTHROPIC_API_KEY parameter (first 15): {ANTHROPIC_API_KEY[:15] if ANTHROPIC_API_KEY else 'None'}")
+                env_key = os.getenv("ANTHROPIC_API_KEY")
+                logger.info(f"Environment ANTHROPIC_API_KEY: {'***' if env_key else 'empty/None'}")
+                logger.info(f"Environment ANTHROPIC_API_KEY (first 15): {env_key[:15] if env_key else 'None'}")
+                
+                anthropic_api_key = ANTHROPIC_API_KEY or env_key
+                logger.info(f"Final anthropic_api_key: {'***' if anthropic_api_key else 'empty/None'}")
+                logger.info(f"Using API key from: {'parameter' if ANTHROPIC_API_KEY else 'environment'}")
+                
+                # Additional debugging - check API key format and length
+                if anthropic_api_key:
+                    logger.info(f"API key length: {len(anthropic_api_key)}")
+                    logger.info(f"API key starts with: {anthropic_api_key[:15]}...")
+                    logger.info(f"API key ends with: ...{anthropic_api_key[-10:]}")
+                    # Check for common issues
+                    if '\n' in anthropic_api_key or '\r' in anthropic_api_key:
+                        logger.warning("API key contains newline characters!")
+                    if ' ' in anthropic_api_key:
+                        logger.warning("API key contains spaces!")
+                    # Clean the API key
+                    anthropic_api_key = anthropic_api_key.strip()
+                    logger.info(f"Cleaned API key length: {len(anthropic_api_key)}")
+                
                 if not anthropic_api_key:
                     raise ValueError(f"Anthropic API key is required for model '{effective_model_name}'. Please configure your Anthropic API key in the settings.")
                 
@@ -698,7 +722,7 @@ class Librairie_Service(ClassifierConfig):
             "rewritten_query": querry_rewriter_output
         }
     
-    def run_multi_repo_pipeline(self, repositories_data: dict, user_problem: str, GEMINI_API_KEY: str, model_name: str = ""):
+    def run_multi_repo_pipeline(self, repositories_data: dict, user_problem: str, GEMINI_API_KEY: str, ANTHROPIC_API_KEY: str, OPENAI_API_KEY: str, model_name: str = ""):
         """
         Run pipeline for multiple repositories.
         Steps 1-8 are run for each repository individually.
@@ -804,16 +828,26 @@ class Librairie_Service(ClassifierConfig):
             user_prompt=prompt_user_code_generator_output,
             model_name=model_name,
             GEMINI_API_KEY=GEMINI_API_KEY,
+            ANTHROPIC_API_KEY=ANTHROPIC_API_KEY,
+            OPENAI_API_KEY=OPENAI_API_KEY,
             trace_id=self.trace_id
         )
 
         return final_response_generator_output
 
     def run_pipeline(self, repository_name: str, cache_id: str, documentation: dict,
-            user_problem: str, documentation_md: dict, config_input: dict, GEMINI_API_KEY: str, model_name: str = ""):
+            user_problem: str, documentation_md: dict, config_input: dict, GEMINI_API_KEY: str, ANTHROPIC_API_KEY: str, OPENAI_API_KEY: str, model_name: str = ""):
         """
         Original single-repository pipeline - now uses the new context retrieval method
         """
+        
+        # Debug API keys received in run_pipeline
+        logger.info(f"run_pipeline called with:")
+        logger.info(f"  - repository_name: {repository_name}")
+        logger.info(f"  - model_name: {model_name}")
+        logger.info(f"  - GEMINI_API_KEY: {'***' if GEMINI_API_KEY else 'empty/None'}")
+        logger.info(f"  - ANTHROPIC_API_KEY: {'***' if ANTHROPIC_API_KEY else 'empty/None'}")
+        logger.info(f"  - OPENAI_API_KEY: {'***' if OPENAI_API_KEY else 'empty/None'}")
         
         # Get context from single repository
         repo_context = self.run_pipeline_up_to_context_retrieval(
@@ -848,6 +882,8 @@ class Librairie_Service(ClassifierConfig):
             user_prompt=prompt_user_code_generator_output,
             model_name=model_name,
             GEMINI_API_KEY=GEMINI_API_KEY,
+            ANTHROPIC_API_KEY=ANTHROPIC_API_KEY,
+            OPENAI_API_KEY=OPENAI_API_KEY,
             trace_id=generate_trace_id(),
             repository_name=repository_name
         )
@@ -920,7 +956,9 @@ if __name__ == "__main__":
             documentation_md=documentation_md_input_test,
             config_input=config_input_test,
             model_name="gemini-2.5-pro-preview-03-25",  # Test with a specific model
-            GEMINI_API_KEY=os.getenv("GEMINI_API_KEY")  # Pass the API key here
+            GEMINI_API_KEY=os.getenv("GEMINI_API_KEY"),  # Pass the API key here
+            ANTHROPIC_API_KEY=os.getenv("ANTHROPIC_API_KEY"),
+            OPENAI_API_KEY=os.getenv("OPENAI_API_KEY")
         )
         print("\n--- Pipeline Execution Succeeded ---")
         print("Final Result:")

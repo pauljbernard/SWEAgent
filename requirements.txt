@@ -2,6 +2,7 @@ instructor==1.6.3
 pydantic==2.9.2
 tenacity==9.0.0
 google.generativeai==0.8.3
+openai>=1.11.0
 typer
 pre-commit
 langfuse==2.53.1

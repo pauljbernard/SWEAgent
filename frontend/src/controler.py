@@ -116,6 +116,11 @@ def initialize_repo():
         
         try:
             gemini_api_key = data.get('GEMINI_API_KEY', '')
+            
+            # Validate that Gemini API key is provided and not empty
+            if not gemini_api_key or not gemini_api_key.strip():
+                return jsonify({'error': 'GEMINI_API_KEY is required to add repositories. Please configure your API key in the settings.'}), 400
+            
             api_key_preview = gemini_api_key[:5] + "..." if gemini_api_key and len(gemini_api_key) > 5 else gemini_api_key
             controller_logger.info(f"Received GEMINI_API_KEY: {api_key_preview} (length: {len(gemini_api_key) if gemini_api_key else 0})")
             
@@ -166,6 +171,11 @@ def add_repository():
         
         try:
             gemini_api_key = data.get('GEMINI_API_KEY', '')
+            
+            # Validate that Gemini API key is provided and not empty
+            if not gemini_api_key or not gemini_api_key.strip():
+                return jsonify({'error': 'GEMINI_API_KEY is required to add repositories. Please configure your API key in the settings.'}), 400
+            
             openai_api_key = data.get('OPENAI_API_KEY', '')
             
             # Process the repository
@@ -267,6 +277,13 @@ def upload_repo():
             controller_logger.info(f"Saved uploaded file to {temp_path}")
             
             gemini_api_key = request.form.get('GEMINI_API_KEY', '')
+            
+            # Validate that Gemini API key is provided and not empty
+            if not gemini_api_key or not gemini_api_key.strip():
+                if 'temp_dir' in locals() and os.path.exists(temp_dir):
+                    shutil.rmtree(temp_dir)
+                return jsonify({'error': 'GEMINI_API_KEY is required to add repositories. Please configure your API key in the settings.'}), 400
+            
             api_key_preview = gemini_api_key[:5] + "..." if gemini_api_key and len(gemini_api_key) > 5 else gemini_api_key
             controller_logger.info(f"Received GEMINI_API_KEY for upload: {api_key_preview} (length: {len(gemini_api_key) if gemini_api_key else 0})")
             

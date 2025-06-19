@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>OpenDeepWiki UX Sample</title>
+  <link rel="stylesheet" href="ui-sample.css" />
+</head>
+<body>
+  <div class="app-container">
+    <div class="sidebar">
+      <h2>Conversations</h2>
+      <ul class="repo-list">
+        <li>Chat 1</li>
+        <li>Chat 2</li>
+      </ul>
+      <hr />
+      <h2>Repositories</h2>
+      <div class="repository-manager">
+        <input type="text" class="repo-input" placeholder="Repository URL" />
+        <button class="action-button">Add Repository</button>
+        <ul class="repo-list">
+          <li>Repo A <button class="action-button">Remove</button></li>
+          <li>Repo B <button class="action-button">Remove</button></li>
+        </ul>
+      </div>
+      <button class="action-button">Configure API Keys</button>
+    </div>
+    <div class="main-area">
+      <div class="messages">
+        <div class="message user">How do I set up the project?</div>
+        <div class="message assistant">You can run <code>docker compose up</code> to start all services.</div>
+        <div class="message user">Thanks!</div>
+      </div>
+      <div class="input-area">
+        <textarea rows="3" placeholder="Type your message..."></textarea>
+        <button>Send</button>
+      </div>
+      <p class="footer">The assistant may produce incorrect information.</p>
+    </div>
+    <div class="right-sidebar">
+      <h2>Repository Info</h2>
+      <p>Name: Repo A</p>
+      <p>Cache ID: abc123</p>
+      <div class="placeholder">
+        <p>Context panel...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal">
+    <div class="modal-content">
+      <h2>API Keys</h2>
+      <input type="text" placeholder="Gemini API Key" class="repo-input" />
+      <input type="text" placeholder="OpenAI API Key (optional)" class="repo-input" />
+      <input type="text" placeholder="Anthropic API Key (optional)" class="repo-input" />
+      <button class="action-button">Save</button>
+    </div>
+  </div>
+</body>
+</html>

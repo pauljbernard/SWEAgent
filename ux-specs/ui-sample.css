@@ -13,6 +13,8 @@ body {
   border-radius: 8px;
   padding: 10px;
   margin-bottom: 20px;
+  flex: 1;
+  overflow-y: auto;
 }
 .message {
   padding: 8px 12px;
@@ -107,4 +109,23 @@ body {
   top: 0;
   height: 100vh;
   color: #ffffff;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  position: relative;
+}
+
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.footer {
+  font-size: 0.8em;
+  color: #b5b5b5;
+  margin-top: 8px;
 }

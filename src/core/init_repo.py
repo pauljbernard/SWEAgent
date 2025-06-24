@@ -1,4 +1,5 @@
 import os
+import re
 import google.generativeai as genai
 from google.generativeai import caching
 import google.api_core.exceptions as exceptions
@@ -176,6 +177,18 @@ def create_cache(display_name: str, documentation: str, system_prompt: str, gemi
                 except Exception as e:
                     logger.warning(f"Failed to delete old cache {cache_to_delete.display_name}: {e}")
     
+    # Gemini API has a minimum token requirement for caching.
+    # We'll use a character count as a proxy to avoid making an API call that will fail.
+    # The error log showed a minimum of 1024 tokens is required.
+    MIN_CHARS_FOR_CACHING = 2048  # A safe buffer
+    if len(documentation) < MIN_CHARS_FOR_CACHING:
+        logger.warning(f"Documentation content is too small ({len(documentation)} chars) to be cached. Skipping cache creation.")
+        # Sanitize the display name for the fallback ID to be compliant with API requirements
+        sanitized_name = re.sub(r'[^a-z0-9-]', '-', unique_display_name.lower()).strip('-')
+        fallback_cache_id = f"fallback-{sanitized_name}"
+        logger.info(f"Using fallback cache ID due to small content: {fallback_cache_id}")
+        return fallback_cache_id
+
     # Create new cache with unique display name
     try:
         cache = caching.CachedContent.create(
@@ -189,10 +202,10 @@ def create_cache(display_name: str, documentation: str, system_prompt: str, gemi
         return cache.name
     except Exception as e:
         logger.error(f"Failed to create cache: {e}")
-        # Generate a fallback cache ID when cache creation fails
-        # This allows the repository addition to proceed even when hitting API limits
-        fallback_cache_id = f"fallback_{unique_display_name}"
-        logger.info(f"Using fallback cache ID: {fallback_cache_id}")
+        # Sanitize the display name for the fallback ID
+        sanitized_name = re.sub(r'[^a-z0-9-]', '-', unique_display_name.lower()).strip('-')
+        fallback_cache_id = f"fallback-{sanitized_name}"
+        logger.info(f"Using fallback cache ID due to API error: {fallback_cache_id}")
         return fallback_cache_id
 
 

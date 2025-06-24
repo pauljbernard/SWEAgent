@@ -177,7 +177,7 @@ class Documentation_Context_Retriver_Node(ClassifierConfig):
 
         documentation_md = documentation_md.get("documentation_md")
         config_doc = config_doc.get("config")
-        if documentation_md and documentation_md[0] != {}:
+        if documentation_md and len(documentation_md) > 0 and documentation_md[0] != {}:
             documentation = documentation + documentation_md
             if config_doc and config_doc[0] != {}:
                 documentation = documentation + config_doc
@@ -364,8 +364,21 @@ class Context_Caching_Retriver_Node(ClassifierConfig):
             # Use default API key from environment
             genai.configure()
 
-        # getting the cached client
-        cache = caching.CachedContent.get(cache_id)
+        # If the cache_id starts with 'fallback-', it's a placeholder and doesn't exist in the API.
+        # In this case, we skip the cache retrieval and return an empty list.
+        if cache_id.startswith("fallback-"):
+            logger.warning(f"Skipping cache retrieval for fallback ID: {cache_id}")
+            return []
+
+        try:
+            # getting the cached client
+            cache = caching.CachedContent.get(cache_id)
+        except exceptions.PermissionDenied as e:
+            logger.error(f"Permission denied for cache '{cache_id}'. This may be a fallback ID or an issue with the API key. {e}")
+            return []
+        except Exception as e:
+            logger.error(f"An unexpected error occurred while retrieving cache '{cache_id}': {e}")
+            return []
 
         client_gemini = instructor.from_gemini(
             client=genai.GenerativeModel.from_cached_content(
@@ -711,11 +724,24 @@ class Librairie_Service(ClassifierConfig):
         )
 
         # Return all context needed for final response generation
+        # Handle the case where documentation_from_context_caching_retriver_output is a list (not a dict)
+        files_list = []
+        if documentation_from_context_caching_retriver_output:
+            if isinstance(documentation_from_context_caching_retriver_output, list):
+                files_list = documentation_from_context_caching_retriver_output
+            elif isinstance(documentation_from_context_caching_retriver_output, dict) and "files_list" in documentation_from_context_caching_retriver_output:
+                files_list = documentation_from_context_caching_retriver_output["files_list"]
+        
+        # Get files_list from md_documentation_output safely
+        files_list_md_config = []
+        if isinstance(md_documentation_output, dict) and "files_list" in md_documentation_output:
+            files_list_md_config = md_documentation_output["files_list"]
+            
         return {
             "repository_name": repository_name,
             "cache_id": cache_id,
-            "files_list": documentation_from_context_caching_retriver_output["files_list"],
-            "files_list_md_config": md_documentation_output["files_list"],
+            "files_list": files_list,
+            "files_list_md_config": files_list_md_config,
             "documentation": documentation,
             "documentation_md": documentation_md,
             "config": config_input,

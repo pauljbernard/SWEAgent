@@ -27,6 +27,10 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Create log directory for supervisord
 RUN mkdir -p /var/log/supervisor
 
+# Create docstrings_json directory and set permissions
+RUN mkdir -p /app/docstrings_json && \
+    chmod 777 /app/docstrings_json
+
 # Expose necessary ports
 EXPOSE 7860 8001 8002 5050
 

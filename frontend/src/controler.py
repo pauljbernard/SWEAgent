@@ -90,7 +90,7 @@ class GenerateRequestModel(BaseModel):
     cache_id: str
     repo_name: str
     target_repositories: list = None  # Optional list of repositories to query
-    GEMINI_API_KEY: str = ""
+
     ANTHROPIC_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     model_config = PydanticConfigDict(protected_namespaces=())
@@ -115,11 +115,12 @@ def initialize_repo():
             return jsonify({'error': 'Repository link is required'}), 400
         
         try:
-            gemini_api_key = data.get('GEMINI_API_KEY', '')
+            # Securely get the API key from the backend environment
+            gemini_api_key = os.getenv("GEMINI_API_KEY")
             
-            # Validate that Gemini API key is provided and not empty
+            # Validate that Gemini API key is available in the environment
             if not gemini_api_key or not gemini_api_key.strip():
-                return jsonify({'error': 'GEMINI_API_KEY is required to add repositories. Please configure your API key in the settings.'}), 400
+                return jsonify({'error': 'GEMINI_API_KEY is not configured on the server. Please check the backend environment.'}), 500
             
             api_key_preview = gemini_api_key[:5] + "..." if gemini_api_key and len(gemini_api_key) > 5 else gemini_api_key
             controller_logger.info(f"Received GEMINI_API_KEY: {api_key_preview} (length: {len(gemini_api_key) if gemini_api_key else 0})")
@@ -170,11 +171,12 @@ def add_repository():
             return jsonify({'error': 'Repository link is required'}), 400
         
         try:
-            gemini_api_key = data.get('GEMINI_API_KEY', '')
+            # Securely get the API key from the backend environment
+            gemini_api_key = os.getenv("GEMINI_API_KEY")
             
-            # Validate that Gemini API key is provided and not empty
+            # Validate that Gemini API key is available in the environment
             if not gemini_api_key or not gemini_api_key.strip():
-                return jsonify({'error': 'GEMINI_API_KEY is required to add repositories. Please configure your API key in the settings.'}), 400
+                return jsonify({'error': 'GEMINI_API_KEY is not configured on the server. Please check the backend environment.'}), 500
             
             openai_api_key = data.get('OPENAI_API_KEY', '')
             
@@ -276,13 +278,13 @@ def upload_repo():
             
             controller_logger.info(f"Saved uploaded file to {temp_path}")
             
-            gemini_api_key = request.form.get('GEMINI_API_KEY', '')
+            gemini_api_key = os.getenv("GEMINI_API_KEY")
             
-            # Validate that Gemini API key is provided and not empty
+            # Validate that Gemini API key is available in the environment
             if not gemini_api_key or not gemini_api_key.strip():
                 if 'temp_dir' in locals() and os.path.exists(temp_dir):
                     shutil.rmtree(temp_dir)
-                return jsonify({'error': 'GEMINI_API_KEY is required to add repositories. Please configure your API key in the settings.'}), 400
+                return jsonify({'error': 'GEMINI_API_KEY is not configured on the server. Please check the backend environment.'}), 500
             
             api_key_preview = gemini_api_key[:5] + "..." if gemini_api_key and len(gemini_api_key) > 5 else gemini_api_key
             controller_logger.info(f"Received GEMINI_API_KEY for upload: {api_key_preview} (length: {len(gemini_api_key) if gemini_api_key else 0})")
@@ -335,7 +337,7 @@ def generate_response():
 
         controller_logger.info(f"Received generate request for model: {req_data.model_name} with message: '{req_data.message[:100]}...'")
         
-        gemini_api_key = req_data.GEMINI_API_KEY
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
         
         # Get repositories for multi-repo processing
         session_id = get_session_id()
@@ -375,7 +377,7 @@ def generate_response():
                 "cache_id": cache_id,
                 "user_problem": req_data.message,
                 "model_name": req_data.model_name,  # Pass the model name dynamically
-                "GEMINI_API_KEY": req_data.GEMINI_API_KEY,
+                "GEMINI_API_KEY": gemini_api_key, # Use the secure key from the environment
                 "ANTHROPIC_API_KEY": req_data.ANTHROPIC_API_KEY,
                 "OPENAI_API_KEY": req_data.OPENAI_API_KEY,
             }

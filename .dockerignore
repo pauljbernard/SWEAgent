@@ -7,3 +7,4 @@ repository_folder/*
 env_doctutor
 node_modules/
 frontend/dist/
+.env

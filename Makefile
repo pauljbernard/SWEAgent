@@ -64,32 +64,20 @@ build: env-check ## Build the Docker image
 	@echo "Building Docker image $(IMAGE_NAME)..."
 	docker build -t $(IMAGE_NAME) .
 
-run: env-check ## Run the Docker container in detached mode
-	@echo "Checking if container $(CONTAINER_NAME) is already running..."
-	@if [ $$(docker ps -q -f name=^$(CONTAINER_NAME)$$) ]; then \
-		echo "Container $(CONTAINER_NAME) is already running."; \
-		echo "Use 'make stop' or 'make restart' if you want to stop/restart it."; \
-	elif [ $$(docker ps -aq -f status=exited -f name=^$(CONTAINER_NAME)$$) ]; then \
-		echo "Removing exited container $(CONTAINER_NAME)..."; \
-		docker rm $(CONTAINER_NAME); \
-		echo "Starting Docker container $(CONTAINER_NAME)..."; \
-		docker run -d --name $(CONTAINER_NAME) \
-		  -p 7860:7860 \
-		  -p 5050:5050 \
-		  -p 8001:8001 \
-		  -p 8002:8002 \
-		  --env-file $(ENV_FILE) \
-		  $(IMAGE_NAME); \
-	else \
-		echo "Starting Docker container $(CONTAINER_NAME)..."; \
-		docker run -d --name $(CONTAINER_NAME) \
-		  -p 7860:7860 \
-		  -p 5050:5050 \
-		  -p 8001:8001 \
-		  -p 8002:8002 \
-		  --env-file $(ENV_FILE) \
-		  $(IMAGE_NAME); \
-	fi
+run: env-check ## Stop, remove, and run the Docker container to ensure a clean start
+	@echo "Ensuring any old container is stopped and removed..."
+	@docker stop $(CONTAINER_NAME) >/dev/null 2>&1 || true
+	@docker rm $(CONTAINER_NAME) >/dev/null 2>&1 || true
+
+	@echo "Starting Docker container $(CONTAINER_NAME)..."
+	docker run -d --name $(CONTAINER_NAME) \
+	  -p 7860:7860 \
+	  -p 5050:5050 \
+	  -p 8001:8001 \
+	  -p 8002:8002 \
+	  --env-file $(ENV_FILE) \
+	  $(IMAGE_NAME)
+
 	@echo "Container $(CONTAINER_NAME) should be running. Access UI at http://localhost:7860"
 
 start: run ## Alias for 'run'
